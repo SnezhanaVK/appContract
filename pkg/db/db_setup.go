@@ -186,7 +186,7 @@ _, err = db.Exec(`CREATE TABLE if not exists stages (
     id_stage int NOT NULL,
     CONSTRAINT id_stage FOREIGN KEY (id_stage) REFERENCES stages(id_stage) ON DELETE CASCADE
 )`)
-	`)
+	
 	if err != nil {
 		log.Fatal("Error files creating table : ", err)
 	}
