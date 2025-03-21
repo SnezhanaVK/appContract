@@ -181,14 +181,14 @@ WHERE s.id_stage=$1`,stage_id)
     return stage, nil
 }
 
-func DBgetFilesStageID(id_files int) (models.File, error ){
+func DBgetFilesStageID(id_stages int) (models.File, error ){
     conn, err:=db.ConnectDB()
     if err!=nil{
         log.Fatal(err)
     }
     defer conn.Close()
 
-    rows, err:=conn.Query("SELECT * FROM files WHERE id_files=$1",id_files)
+    rows, err:=conn.Query("SELECT * FROM files WHERE Id_stage=$1",id_stages)
     if err!=nil{
         log.Fatal(err)      
     }
@@ -234,10 +234,10 @@ func DBgetStageIdStatus(id_stage int) (models.Stages, error ){
     return stage, nil
 }
 
-    func DBaddFile(id_stage int, file models.File) error{
+    func DBaddFile(file models.File) error{
         conn, err:=db.ConnectDB()
         if err!=nil{
-            log.Fatal(err)
+            return err
         }
         defer conn.Close()
     
@@ -250,7 +250,7 @@ func DBgetStageIdStatus(id_stage int) (models.Stages, error ){
         file.Name_file,
         file.Data,
         file.Type_file,
-        id_stage)
+        file.Id_stage)
         
         if err!=nil{    
             log.Fatal(err)  
@@ -288,7 +288,7 @@ func DBaddStage(stage models.Stages) error{
 
 }
 
-func DBCreateComment(comment models.HistoreStatus) error{
+func DBCreateComment(comment models.Stages) error{
     conn, err:=db.ConnectDB()
     if err!=nil{
         log.Fatal(err)
@@ -315,63 +315,64 @@ func DBCreateComment(comment models.HistoreStatus) error{
 
 }
 
-func DBgetComment(id_stage int) (models.HistoreStatus, error ){
-    conn, err:=db.ConnectDB()
-    if err!=nil{
+func DBgetComment(id_stage int) ([]models.Stages, error) {
+    conn, err := db.ConnectDB()
+    if err != nil {
         log.Fatal(err)
     }
     defer conn.Close()
 
-    rows, err:=conn.Query(`SELECT * 
+    rows, err := conn.Query(`SELECT * 
                             FROM history_states 
-                            WHERE id_stage=$1`,id_stage)
-    if err!=nil{
-        log.Fatal(err)      
+                            WHERE id_stage=$1`, id_stage)
+    if err != nil {
+        log.Fatal(err)
     }
-    defer rows.Close()                  
+    defer rows.Close()
 
-    var comment models.HistoreStatus  
-    for rows.Next(){
-        err=rows.Scan(&comment.Id_history_state,
-                      &comment.Id_status_stage, 
-                      &comment.Id_stage,
-                      &comment.Data_create,
-                      &comment.Comment)
+    var comments []models.Stages
+    for rows.Next() {
+        var comment models.Stages
+        err = rows.Scan(&comment.Id_history_state,
+            &comment.Id_status_stage,
+            &comment.Id_stage,
+            &comment.Data_create,
+            &comment.Comment)
 
-        if err!=nil{
+        if err != nil {
             log.Fatal(err)
         }
+        comments = append(comments, comment)
     }
-    return comment, nil
+    return comments, nil
 }
-
-func DBChengeStatusStage(id_stage int, id_status_stage int, comment string) error{
-    conn, err:=db.ConnectDB()
-    if err!=nil{
+func DBChengeStatusStage(id_stage int, id_status_stage int, comment string) error {
+    conn, err := db.ConnectDB()
+    if err != nil {
         log.Fatal(err)
     }
     defer conn.Close()
 
-    _, err=conn.Exec(`UPDATE stages 
+    _, err = conn.Exec(`UPDATE stages 
     SET id_status_stage=$1, data_create=NOW()
     WHERE id_stage=$2`,
 
-    id_status_stage,
-    id_stage)
-    
-    if err!=nil{    
-        log.Fatal(err)  
+        id_status_stage,
+        id_stage)
+
+    if err != nil {
+        return err
     }
 
-    _, err=conn.Exec(`INSERT INTO history_states (id_stage, id_status_stage, data_create, comment)
+    _, err = conn.Exec(`INSERT INTO history_states (id_stage, id_status_stage, data_create, comment)
     VALUES ($1, $2, NOW(), $3)`,
 
-    id_stage,
-    id_status_stage,
-    comment)
-    
-    if err!=nil{    
-        log.Fatal(err)  
+        id_stage,
+        id_status_stage,
+        comment)
+
+    if err != nil {
+        return err
     }
     return nil
 }

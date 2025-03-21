@@ -24,4 +24,8 @@ type Stages struct {
 
 	Id_type_contract   int    `json:"id_type_contract"`
 	Name_type_contract string `json:"d_type_contract"`
+
+	Id_history_state int    `json:"id_history_state"`
+	Data_create      string `json:"data_create"`
+	Comment          string `json:"comment"`
 }

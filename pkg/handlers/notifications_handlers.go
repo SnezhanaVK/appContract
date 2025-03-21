@@ -20,9 +20,7 @@ func GetComment(w http.ResponseWriter, r *http.Request) {
     // ... existing code ...
 }
 
-func GetStageComments(w http.ResponseWriter, r *http.Request) {
-    // ... existing code ...
-}
+
 
 func GetNotificationInfo(w http.ResponseWriter, r *http.Request) {
     // ... existing code ...

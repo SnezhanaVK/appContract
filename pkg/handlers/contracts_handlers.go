@@ -21,31 +21,14 @@ func GetAllContracts(w http.ResponseWriter, r *http.Request) {
         http.Error(w, err.Error(), http.StatusInternalServerError)
         return
     }
+    
+
     w.WriteHeader(http.StatusOK)
-    json.NewEncoder(w).Encode(contracts)
+    if err := json.NewEncoder(w).Encode(contracts); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+    }
 }
-
-func GetUserIDContracts(w http.ResponseWriter, r *http.Request) {
-
-    if r.Method!=http.MethodGet{
-        http.Error(w,"Invalid request method GetUserIDContracts",http.StatusBadRequest)
-        return
-    }
-    userId, err:= strconv.Atoi(r.URL.Query().Get("user_id"))
-    if err != nil {
-        http.Error(w, "Invalid user_id", http.StatusBadRequest)
-        return
-    }
-
-    contracts, err := db.DBgetContractUserId(userId)
-    if err != nil {
-        http.Error(w, err.Error(), http.StatusInternalServerError)
-        return
-    }
-    w.WriteHeader(http.StatusOK)
-    json.NewEncoder(w).Encode(contracts)
-}
-
 func GetContractID(w http.ResponseWriter, r *http.Request) {
     if r.Method!=http.MethodGet{
         http.Error(w,"Invalid request method GetContract",http.StatusBadRequest)
@@ -64,6 +47,31 @@ func GetContractID(w http.ResponseWriter, r *http.Request) {
     w.WriteHeader(http.StatusOK)
     json.NewEncoder(w).Encode(contract)
 }
+
+func GetUserIDContracts(w http.ResponseWriter, r *http.Request) {
+
+    if r.Method!=http.MethodGet{
+        http.Error(w,"Invalid request method GetUserIDContracts",http.StatusBadRequest)
+        return
+    }
+    userId, err:= strconv.Atoi(r.URL.Query().Get("user_id"))
+    if err != nil {
+        http.Error(w, "Invalid user_id", http.StatusBadRequest)
+        return
+    }
+    contracts, err := db.DBgetContractUserId(userId)
+    if err != nil {
+        http.Error(w, err.Error(), http.StatusInternalServerError)
+        return
+    }
+       w.WriteHeader(http.StatusOK)
+        if err := json.NewEncoder(w).Encode(contracts); err != nil {
+            http.Error(w, err.Error(), http.StatusInternalServerError)
+            return
+        }   
+}
+
+
 
 func PostCreateContract(w http.ResponseWriter, r *http.Request) {
   if r.Method!=http.MethodPost{

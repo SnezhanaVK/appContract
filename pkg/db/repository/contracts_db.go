@@ -76,7 +76,7 @@ func DBgetContractAll() ([]models.Contracts, error) {//сделать вывод
     &contract.Tegs_contract,
 		)
 		if err != nil {
-			log.Fatal(err)
+			return nil, err
 		}
 		contracts = append(contracts, contract)
 	}
@@ -125,7 +125,7 @@ func DBgetContractID(contractID int) ([]models.Contracts, error) {
         tegs t ON cbt.id_teg = t.id_teg
 		 FROM contracts WHERE id_contract=$1`,contractID)
 	if err != nil {
-		log.Fatal(err)
+		return nil,	err
 	}
 	defer rows.Close()		
 
@@ -152,7 +152,7 @@ func DBgetContractID(contractID int) ([]models.Contracts, error) {
     &contract.Tegs_contract,
 	)
 		if err !=nil{
-			log.Fatal(err)
+			return nil,err
 		}
 		cotnracts=append(cotnracts,contract)
 	}
@@ -206,7 +206,7 @@ func DBgetContractUserId(user_id int) ([]models.Contracts, error) {
             status_contracts sc ON c.id_status_contract = sc.id_status_contract
         WHERE c.user_id = $1`, user_id)
     if err != nil {
-        log.Fatal(err)
+        return nil, err
     }
     defer rows.Close()
 
@@ -241,7 +241,7 @@ func DBgetContractUserId(user_id int) ([]models.Contracts, error) {
 						&contract.Notes, 
 						&contract.Condition)
         if err != nil {
-            log.Fatal(err)
+            return nil, err
         }
         contracts = append(contracts, contract)
     }
@@ -251,7 +251,7 @@ func DBgetContractUserId(user_id int) ([]models.Contracts, error) {
 func DBaddContract(contract models.Contracts)error{
 	conn ,err:=db.ConnectDB()
 	if err !=nil{
-		log.Fatal(err)
+		return err
 	}
 	defer conn.Close()
 
@@ -290,7 +290,7 @@ func DBaddContract(contract models.Contracts)error{
 		contract.Condition,
 	)
 	if err!=nil{
-		log.Fatal(err)
+		return err
 	}
 	return nil
 }
@@ -298,7 +298,7 @@ func DBaddContract(contract models.Contracts)error{
 func DBchangeContract(contract models.Contracts) error{
 	conn, err:= db.ConnectDB()
 	if err!=nil{
-		log.Fatal(err)
+		return err
 	}
 		defer conn.Close()
 	
@@ -340,7 +340,7 @@ func DBchangeContract(contract models.Contracts) error{
 		
 	)
 	if err!=nil{
-		log.Fatal(err)
+		return err
 	}
 	return nil
 }
@@ -348,7 +348,7 @@ func DBchangeContract(contract models.Contracts) error{
 func DBchangeContractUser(id_contract int, id_user int) error{
 	conn, err:= db.ConnectDB()
 	if err!=nil{
-		log.Fatal(err)
+		return err
 	}
 	defer conn.Close()
 
@@ -359,7 +359,7 @@ func DBchangeContractUser(id_contract int, id_user int) error{
 	`, id_contract, id_user)
 
 	if err!=nil{
-		log.Fatal(err)
+		return err
 	}
 	return nil
 }
@@ -367,7 +367,7 @@ func DBchangeContractUser(id_contract int, id_user int) error{
 func DBdeleteContract(contract_id int)error{
 	conn, err:=db.ConnectDB()
 	if err!=nil{
-		log.Fatal(err)
+		return err
 
 	}
 	defer conn.Close()
@@ -376,7 +376,7 @@ func DBdeleteContract(contract_id int)error{
 		`
 		DELETE FROM contracts WHERE id_contract=$1`, contract_id)
 		if err!=nil{
-			log.Fatal(err)
+			return err
 		}
 		return nil
 }
