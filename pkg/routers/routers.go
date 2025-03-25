@@ -17,7 +17,7 @@ func NewRouter() *mux.Router {
     UserRoutes(router)
     ContractRoutes(router)
     StageRoutes(router)
-    NotificationRoutes(router)
+    // NotificationRoutes(router)
 
     return router
 }
