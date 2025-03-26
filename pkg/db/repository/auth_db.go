@@ -49,3 +49,20 @@ func GetAddmin(id int)(bool,error){
 	}
 	return isAdmin, nil
 }
+
+
+func ChangePassword(id int, password string)error{
+	if password==""{
+		return errors.New("password is required")
+	}
+	conn,err:=db.ConnectDB()
+	if err!=nil{
+		return err
+	}
+	defer conn.Close()
+	_,err=conn.Exec(`UPDATE users SET password=$1 WHERE id=$2`,password,id)
+	if err!=nil{
+		return err
+	}
+	return nil
+}
