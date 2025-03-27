@@ -66,3 +66,29 @@ func ChangePassword(id int, password string)error{
 	}
 	return nil
 }
+
+func GetUser(email string) (models.Users, error) {
+	conn, err := db.ConnectDB()
+	if err != nil {
+		return models.Users{}, err
+	}
+	defer conn.Close()
+
+	var user models.Users
+
+	err = conn.QueryRow(`SELECT id_user, email, login, password FROM users WHERE email = $1`, email).Scan(
+		&user.Id_user,
+		&user.Email,
+		&user.Login,
+		&user.Password,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {	
+			return models.Users{}, errors.New("user not found")
+		}
+		return models.Users{}, err
+	}
+
+	return user, nil
+}

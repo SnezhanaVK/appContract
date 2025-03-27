@@ -6,10 +6,10 @@ type Users struct {
 	Username        string `json:"username"`
 	Patronymic      string `json:"patronymic"`
 	Phone           string `json:"phone"`
-	Photo           byte   `json:"photo"`
+	Photo           []byte `json:"photo"`
 	Email           string `json:"email"`
-	Role_id         string `json:"role_id"`
-	Notification_id string `json:"notification_id"`
+	Role_id         int    `json:"role_id"`
+	Notification_id int    `json:"notification_id"`
 	Admin           bool   `json:"admin"`
 	Login           string `json:"login"`
 	Password        string `json:"password"`

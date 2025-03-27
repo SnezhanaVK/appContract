@@ -50,14 +50,14 @@ func DBgetUserAll() ([]models.Users, error) {
 	return users, nil
 }
 
-func DBgetUserID( user_id int)([]models.Users, error){
-conn, err:= db.ConnectDB()
-if err!=nil{
-	log.Fatal(err)
-}
-defer conn.Close()
+func DBgetUserID(user_id int) ([]models.Users, error) {
+    conn, err := db.ConnectDB()
+    if err != nil {
+        return nil, err
+    }
+    defer conn.Close()
 
-rows, err := conn.Query(`SELECT 
+    rows, err := conn.Query(`SELECT 
   u.id_user, 
   u.surname, 
   u.username, 
@@ -70,32 +70,31 @@ rows, err := conn.Query(`SELECT
   n.variant_notification
 FROM users u
 JOIN notifications n ON u.notification_id = n.id_notification
-							WHERE id_user=$1`,user_id)
-if err != nil {
-	log.Fatal(err)
-}
-defer rows.Close()
+WHERE id_user=$1`, user_id)
+    if err != nil {
+        return nil, err
+    }
+    defer rows.Close()
 
-// обработка результата
-var users []models.Users
-for rows.Next() {
-	var user models.Users
-	err = rows.Scan(&user.Id_user, 
-					&user.Surname, 
-					&user.Username, 
-					&user.Patronymic, 
-					&user.Phone, 
-					&user.Photo,
-					&user.Email,
-					&user.Login,
-					&user.Notification_id,
-					&user.Variant_notification,)
-	if err != nil {
-		log.Fatal(err)
-	}
-	users = append(users, user)
-}
-return users, nil
+    var users []models.Users
+    for rows.Next() {
+        var user models.Users
+        err = rows.Scan(&user.Id_user, 
+                        &user.Surname, 
+                        &user.Username, 
+                        &user.Patronymic, 
+                        &user.Phone, 
+                        &user.Photo,
+                        &user.Email,
+                        &user.Login,
+                        &user.Notification_id,
+                        &user.Variant_notification)
+        if err != nil {
+            return nil, err
+        }
+        users = append(users, user)
+    }
+    return users, nil
 }
 
 func DBaddUser(user models.Users) error{
@@ -107,7 +106,6 @@ func DBaddUser(user models.Users) error{
 
 	_,err =conn.Exec(`
 	INSERT INTO users (
-	id_user, 
 	surname, 
 	username, 
 	patronymic, 

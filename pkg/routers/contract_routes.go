@@ -12,7 +12,7 @@ func ContractRoutes(router *mux.Router) {
     router.HandleFunc("/api/contracts/{userID}", handlers.GetUserIDContracts).Methods("GET")
     router.HandleFunc("/api/contracts/{contractID}", handlers.GetContractID).Methods("GET")
     router.HandleFunc("/api/contracts/create", handlers.PostCreateContract).Methods("POST")
-    router.HandleFunc("/api/contracts/{id}/data", handlers.PutChangeContract).Methods("PUT")
+    router.HandleFunc("/api/contracts/{id}", handlers.PutChangeContract).Methods("PUT")
     router.HandleFunc("/api/contracts/{id}/user/{userID}", handlers.PutChangeContractUser).Methods("PUT")
     router.HandleFunc("/api/contracts/{contractID}", handlers.DeleteContract).Methods("DELETE")
 }

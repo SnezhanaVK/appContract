@@ -134,7 +134,23 @@ func PutForgotPassword(w http.ResponseWriter, r *http.Request) {
     }
     w.WriteHeader(http.StatusOK)
     json.NewEncoder(w).Encode(map[string]string{"message": "Password updated successfully"})
+ 
+} 
 
-    
-
-}   
+func GetUsers(w http.ResponseWriter, r *http.Request) {
+    if r.Method != http.MethodGet {
+        http.Error(w, "Invalid request method", http.StatusBadRequest)
+        return
+    }
+    email := r.URL.Query().Get("email")
+    if email == "" {
+        http.Error(w, "Email is required", http.StatusBadRequest)
+        return
+    }
+    user, err := db.GetUser(email)
+    if err != nil {
+        http.Error(w, err.Error(), http.StatusInternalServerError)
+        return
+    }
+    json.NewEncoder(w).Encode(user)
+}

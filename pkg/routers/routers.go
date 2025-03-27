@@ -10,7 +10,7 @@ func NewRouter() *mux.Router {
     router := mux.NewRouter()
 
     // Авторизация
-    router.HandleFunc("/api/authorizations", handlers.Login).Methods("POST")
+    router.HandleFunc("/api/authorizations ", handlers.Login).Methods("POST")
     router.HandleFunc("/api/forgot-password", handlers.PutForgotPassword).Methods("PUT")
 
     // Вызов маршрутов
