@@ -62,8 +62,8 @@ func SetupDatabase() {
 		surname VARCHAR(255) NOT NULL,
 		username VARCHAR(255) NOT NULL,
 		patronymic VARCHAR(255) NOT NULL,
-		phone VARCHAR(9) NOT NULL,
-		photo bytea NOT NULL,
+		phone VARCHAR(20) NOT NULL,
+		photo VARCHAR(255) NOT NULL,
 		email VARCHAR(255) NOT NULL,
 		role_id int NOT NULL,
 		notification_id int NOT NULL,
@@ -146,8 +146,8 @@ func SetupDatabase() {
 		term_payment varchar(255) NOT NULL, 
 		id_counterparty int NOT NULL,
 		id_status_contract int NOT NULL,
-		notes text NOT NULL,
-		conditions text NOT NULL,
+		notes varchar(1000) NOT NULL,
+		conditions varchar(1000) NOT NULL,
 		CONSTRAINT id_user FOREIGN KEY (id_user) REFERENCES users(id_user),
 		CONSTRAINT id_type FOREIGN KEY (id_type) REFERENCES types_contracts(id_type_contract),
 		CONSTRAINT id_counterparty FOREIGN KEY (id_counterparty) REFERENCES counterparty(id_counterparty),
@@ -209,6 +209,7 @@ _, err = db.Exec(`CREATE TABLE if not exists stages (
 	_, err = db.Exec(`CREATE TABLE if not exists contracts_by_tegs (
 		id_contract_by_teg SERIAL PRIMARY KEY,
 		id_contract int NOT NULL,
+		
 		id_teg int NOT NULL,
 		CONSTRAINT id_contract FOREIGN KEY (id_contract) REFERENCES contracts(id_contract),
 		CONSTRAINT id_teg FOREIGN KEY (id_teg) REFERENCES tegs(id_teg)

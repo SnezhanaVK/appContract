@@ -139,7 +139,9 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userId, err := strconv.Atoi(r.URL.Query().Get("user_id"))
+
+	vars:=mux.Vars(r)
+	userId, err := strconv.Atoi(vars["id"])
 	if err != nil {
 		http.Error(w, "Invalid user_id", http.StatusBadRequest)
 		return

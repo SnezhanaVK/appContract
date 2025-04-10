@@ -3,6 +3,8 @@ package db
 import (
 	"appContract/pkg/db"
 	"appContract/pkg/models"
+	"errors"
+	"fmt"
 	"log"
 )
 
@@ -11,7 +13,7 @@ func DBgetContractAll() ([]models.Contracts, error) {//сделать вывод
 	// соединение с бд
 	conn, err := db.ConnectDB()
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	defer conn.Close()
 
@@ -24,6 +26,7 @@ func DBgetContractAll() ([]models.Contracts, error) {//сделать вывод
         u.username,
         u.patronymic,
         c.data_conclusion,
+		c.date_create_contract,
         c.data_end,
         c.id_type,
         tc.name_type_contract,
@@ -48,7 +51,7 @@ func DBgetContractAll() ([]models.Contracts, error) {//сделать вывод
         tegs t ON cbt.id_teg = t.id_teg
 	`)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	defer rows.Close()
 
@@ -56,30 +59,31 @@ func DBgetContractAll() ([]models.Contracts, error) {//сделать вывод
 	var contracts []models.Contracts
 	for rows.Next() {
 		var contract models.Contracts	
-	
 		err=rows.Scan(
-	&contract.Id_contract,
-    &contract.Name_contract,
-    &contract.User_id,
-    &contract.Surname,
-    &contract.Username,
-    &contract.Patronymic,
-    &contract.Data_conclusion,
-    &contract.Data_end,
-    &contract.Id_type,
-    &contract.Name_type,
-    &contract.Id_counterparty,
-    &contract.Name_counterparty,
-    &contract.Id_status_contract,
-    &contract.Name_status_contract,
-    &contract.Id_teg_contract,
-    &contract.Tegs_contract,
+		&contract.Id_contract,
+		&contract.Name_contract,
+		&contract.Id_user,
+		&contract.Surname,
+		&contract.Username,
+		&contract.Patronymic,
+		&contract.Data_conclusion,
+		&contract.Data_contract_create,
+		&contract.Data_end,
+		&contract.Id_type,
+		&contract.Name_type,
+		&contract.Id_counterparty,
+		&contract.Name_counterparty,
+		&contract.Id_status_contract,
+		&contract.Name_status_contract,
+		&contract.Id_teg_contract,
+		&contract.Tegs_contract,
 		)
 		if err != nil {
 			return nil, err
 		}
 		contracts = append(contracts, contract)
 	}
+	
 	return contracts, nil
 }
 
@@ -93,37 +97,39 @@ func DBgetContractID(contractID int) ([]models.Contracts, error) {
 
 	// запрос к бд			
 	rows, err := conn.Query(`SELECT 
-		c.id_contract,
-        c.name_contract,
-        c.id_user,
-        u.surname,
-        u.username,
-        u.patronymic,
-        c.data_conclusion,
-        c.data_end,
-        c.id_type,
-        tc.name_type_contract,
-        c.id_counterparty,
-        cp.name_counterparty,
-        c.id_status_contract,
-        sc.name_status_contract,
-        cbt.id_teg,
-        t.name_teg
-    FROM 
-        contracts c
-    JOIN 
-        users u ON c.id_user = u.id_user
-    JOIN 
-        types_contracts tc ON c.id_type = tc.id_type_contract
-    JOIN 
-        counterparty cp ON c.id_counterparty = cp.id_counterparty
-    JOIN 
-        status_contracts sc ON c.id_status_contract = sc.id_status_contract
-    JOIN 
-        contracts_by_tegs cbt ON c.id_contract = cbt.id_contract
-    JOIN 
-        tegs t ON cbt.id_teg = t.id_teg
-		 FROM contracts WHERE id_contract=$1`,contractID)
+    c.id_contract,
+    c.name_contract,
+    c.id_user,
+    u.surname,
+    u.username,
+    u.patronymic,
+    c.data_conclusion,
+    c.data_end,
+	c.date_create_contract,
+    c.id_type,
+    tc.name_type_contract,
+    c.id_counterparty,
+    cp.name_counterparty,
+    c.id_status_contract,
+    sc.name_status_contract,
+    cbt.id_teg,
+    t.name_teg
+FROM 
+    contracts c
+JOIN 
+    users u ON c.id_user = u.id_user
+JOIN 
+    types_contracts tc ON c.id_type = tc.id_type_contract
+JOIN 
+    counterparty cp ON c.id_counterparty = cp.id_counterparty
+JOIN 
+    status_contracts sc ON c.id_status_contract = sc.id_status_contract
+JOIN 
+    contracts_by_tegs cbt ON c.id_contract = cbt.id_contract
+JOIN 
+    tegs t ON cbt.id_teg = t.id_teg
+WHERE 
+    c.id_contract=$1`,contractID)
 	if err != nil {
 		return nil,	err
 	}
@@ -136,12 +142,13 @@ func DBgetContractID(contractID int) ([]models.Contracts, error) {
 		err=rows.Scan(
 	&contract.Id_contract,
     &contract.Name_contract,
-    &contract.User_id,
+    &contract.Id_user,
     &contract.Surname,
     &contract.Username,
     &contract.Patronymic,
     &contract.Data_conclusion,
     &contract.Data_end,
+	&contract.Data_contract_create,
     &contract.Id_type,
     &contract.Name_type,
     &contract.Id_counterparty,
@@ -204,7 +211,7 @@ func DBgetContractUserId(user_id int) ([]models.Contracts, error) {
             counterparty cp ON c.id_counterparty = cp.id_counterparty
         JOIN 
             status_contracts sc ON c.id_status_contract = sc.id_status_contract
-        WHERE c.user_id = $1`, user_id)
+        WHERE c.id_user = $1`, user_id)
     if err != nil {
         return nil, err
     }
@@ -216,7 +223,7 @@ func DBgetContractUserId(user_id int) ([]models.Contracts, error) {
         err = rows.Scan(&contract.Id_contract,
 					    &contract.Name_contract, 
 						&contract.Data_contract_create, 
-						&contract.User_id, 
+						&contract.Id_user, 
 						&contract.Surname, 
 						&contract.Username, 
 						&contract.Patronymic, 
@@ -254,6 +261,14 @@ func DBaddContract(contract models.Contracts)error{
 		return err
 	}
 	defer conn.Close()
+	var userExist bool
+    err = conn.QueryRow(`SELECT EXISTS(SELECT 1 FROM users WHERE id_user = $1)`, contract.Id_user).Scan(&userExist)
+    if err != nil {
+        return err
+    }
+    if !userExist {
+        return errors.New("user not found")
+    }
 
 	_,err=conn.Exec(`
 	INSERT INTO contracts (
@@ -274,10 +289,9 @@ func DBaddContract(contract models.Contracts)error{
 		$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13
 		)
 		`,
-		contract.Id_contract,
 		contract.Name_contract,
 		contract.Data_contract_create,
-		contract.User_id,
+		contract.Id_user,
 		contract.Data_conclusion,
 		contract.Data_end,
 		contract.Id_type,
@@ -290,6 +304,7 @@ func DBaddContract(contract models.Contracts)error{
 		contract.Condition,
 	)
 	if err!=nil{
+		
 		return err
 	}
 	return nil
@@ -304,8 +319,6 @@ func DBchangeContract(contract models.Contracts) error{
 	
 	_, err=conn.Exec(`
 	UPDATE  contracts SET
-		UPDATE contracts SET
-
 		name_contract = $1,
 		date_create_contract = $2,
 		id_user = $3,
@@ -321,10 +334,10 @@ func DBchangeContract(contract models.Contracts) error{
 		conditions = $13
 		WHERE id_contract = $14
 		`,
-		contract.Id_contract,
+		
 		contract.Name_contract,
 		contract.Data_contract_create,
-		contract.User_id,
+		contract.Id_user,
 		contract.Data_conclusion,
 		contract.Data_end,
 		contract.Id_type,
@@ -345,23 +358,47 @@ func DBchangeContract(contract models.Contracts) error{
 	return nil
 }
 
-func DBchangeContractUser(id_contract int, id_user int) error{
-	conn, err:= db.ConnectDB()
-	if err!=nil{
-		return err
-	}
-	defer conn.Close()
+func DBchangeContractUser(id_contract int, id_user int) error {
+    conn, err := db.ConnectDB()
+    if err != nil {
+        return err
+    }
+    defer conn.Close()
 
-	_, err = conn.Exec(`
-		UPDATE contracts
-		SET user_id = $2
-		WHERE id_contract = $1
-	`, id_contract, id_user)
+    // Проверяем, существует ли id_user в таблице users
+    var exists bool
+    err = conn.QueryRow(`SELECT EXISTS(SELECT 1 FROM users WHERE id_user = $1)`, id_user).Scan(&exists)
+    if err != nil {
+        return err
+    }
+    if !exists {
+        return errors.New("id_user не существует в таблице users")
+    }
+	// Проверяем, существует ли id_contract в таблице contracts
+    exists = false
+    err = conn.QueryRow(`SELECT EXISTS(SELECT 1 FROM contracts WHERE id_contract = $1)`, id_contract).Scan(&exists)
+    if err != nil {
+        return err
+    }
+    if !exists {
+        return errors.New("id_contract не существует в таблице contracts")
+    }
 
-	if err!=nil{
-		return err
-	}
-	return nil
+    _, err = conn.Exec(`
+        UPDATE contracts
+        SET id_user = $2
+        WHERE id_contract = $1
+    `, id_contract, id_user)
+
+    if err != nil {
+        // Отловим ошибку и получим подробное сообщение об ошибке
+        if pgErr, ok := err.(*pg.Error); ok {
+            return errors.Wrap(err, fmt.Sprintf("Ошибка базы данных: %v, Код ошибки: %v, Подробное сообщение об ошибке: %v", pgErr.Message, pgErr.Code, pgErr.Detail))
+        } else {
+            return errors.Wrap(err, "Ошибка базы данных")
+        }
+    }
+    return nil
 }
 
 func DBdeleteContract(contract_id int)error{

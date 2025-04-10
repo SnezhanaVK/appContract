@@ -8,16 +8,16 @@ type Contracts struct {
 	
 	Id_contract     int       `json:"id_contract"`
 	Name_contract   string    `json:"name_contract"`
-	Data_contract_create   string    `json:"data_contract_create"`
-	User_id         int       `json:"user_id"`
+	Data_contract_create   time.Time    `json:"data_contract_create"`
+	Id_user         int       `json:"id_user"`
 	Data_conclusion time.Time `json:"data_conclusion"`
 	Data_end        time.Time `json:"data_end"`
 	Id_type         int       `json:"id_type"`
 	Cost            int       `json:"cost"`
 	Object_contract string    `json:"object_contract"`
-	Term_contract   int       `json:"term_contract"`
+	Term_contract   string      `json:"term_contract"`
 	Id_counterparty int       `json:"id_counterparty"`
-	Id_status_contract string    `json:"status_contract"`
+	Id_status_contract int       `json:"id_status_contract"`
 	Notes           string    `json:"notes"`
 	Condition       string    `json:"condition"`
 	Id_teg_contract int       `json:"id_teg_contract"`

@@ -4,10 +4,13 @@ package handlers
 import (
 	"appContract/pkg/models"
 	"encoding/json"
+	"log"
 	"net/http"
 	"strconv"
 
 	db "appContract/pkg/db/repository"
+
+	"github.com/gorilla/mux"
 )
 
 // Contracts
@@ -21,54 +24,140 @@ func GetAllContracts(w http.ResponseWriter, r *http.Request) {
         http.Error(w, err.Error(), http.StatusInternalServerError)
         return
     }
-    
-
-    w.WriteHeader(http.StatusOK)
-    if err := json.NewEncoder(w).Encode(contracts); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+    var contractsResponse []map[string]interface{}
+    for _, contract := range contracts {
+        contractResponse := map[string]interface{}{
+            "contract_id": contract.Id_contract,
+            "name_contract": contract.Name_contract,
+            "date_create_contract": contract.Data_contract_create,
+            "user_id": contract.Id_user,
+            "data_conclusion": contract.Data_conclusion,
+            "data_start": contract.Data_contract_create,
+            "data_end": contract.Data_end,
+            "id_type": contract.Id_type,
+            "name_type_contract": contract.Name_type,
+            "id_counterparty": contract.Id_counterparty,
+            "name_counterparty": contract.Name_counterparty,
+            "id_status_contract": contract.Id_status_contract,
+            "name_status_contract": contract.Name_status_contract,
+            "id_teg": contract.Id_teg_contract,
+            "name_teg": contract.Tegs_contract,
+        }
+        contractsResponse = append(contractsResponse, contractResponse)
     }
+    data, err:=json.Marshal(contractsResponse)
+    if err != nil {
+        http.Error(w, err.Error(), http.StatusInternalServerError)
+        return
+    }
+    w.WriteHeader(http.StatusOK)
+    w.Write(data)
 }
 func GetContractID(w http.ResponseWriter, r *http.Request) {
     if r.Method!=http.MethodGet{
         http.Error(w,"Invalid request method GetContract",http.StatusBadRequest)
         return
     }
-    constantId, err:= strconv.Atoi(r.URL.Query().Get("contract_id"))
+    vars:=mux.Vars(r)
+    contractId:=vars["contractID"]
+    if contractId==""{
+        http.Error(w,"Invalid contract_id",http.StatusBadRequest)
+        return
+    }
+    id, err:= strconv.Atoi(contractId)
     if err != nil {
         http.Error(w, "Invalid contract_id", http.StatusBadRequest)
         return
     }
-    contract, err := db.DBgetContractID(constantId)
+   
+    contract, err := db.DBgetContractID(id)
+    if err != nil {
+        http.Error(w, err.Error(), http.StatusInternalServerError)
+        return
+    }
+    var contractsResponse []map[string]interface{}
+    for _, contract := range contract {
+        contractResponse := map[string]interface{}{
+            "contract_id": contract.Id_contract,
+            "name_contract": contract.Name_contract,
+            "date_create_contract": contract.Data_contract_create,
+            "user_id": contract.Id_user,
+            "data_conclusion": contract.Data_conclusion,
+            "data_start": contract.Data_contract_create,
+            "data_end": contract.Data_end,
+            "id_type": contract.Id_type,
+            "name_type_contract": contract.Name_type,
+            "id_counterparty": contract.Id_counterparty,
+            "name_counterparty": contract.Name_counterparty,
+            "id_status_contract": contract.Id_status_contract,
+            "name_status_contract": contract.Name_status_contract,
+            "id_teg": contract.Id_teg_contract,
+            "name_teg": contract.Tegs_contract,
+        }
+        contractsResponse = append(contractsResponse, contractResponse)
+    }
+    data, err:=json.Marshal(contractsResponse)
     if err != nil {
         http.Error(w, err.Error(), http.StatusInternalServerError)
         return
     }
     w.WriteHeader(http.StatusOK)
-    json.NewEncoder(w).Encode(contract)
+    w.Write(data)
 }
 
 func GetUserIDContracts(w http.ResponseWriter, r *http.Request) {
 
     if r.Method!=http.MethodGet{
+    
         http.Error(w,"Invalid request method GetUserIDContracts",http.StatusBadRequest)
         return
     }
-    userId, err:= strconv.Atoi(r.URL.Query().Get("user_id"))
+    vars:=mux.Vars(r)
+    userId:=vars["userID"]
+    if userId==""{
+        http.Error(w,"Invalid user_id",http.StatusBadRequest)
+        return
+    }
+    id, err:= strconv.Atoi(userId)
     if err != nil {
+        log.Println(err)
         http.Error(w, "Invalid user_id", http.StatusBadRequest)
         return
     }
-    contracts, err := db.DBgetContractUserId(userId)
+    contracts, err := db.DBgetContractUserId(id)
     if err != nil {
         http.Error(w, err.Error(), http.StatusInternalServerError)
         return
     }
-       w.WriteHeader(http.StatusOK)
-        if err := json.NewEncoder(w).Encode(contracts); err != nil {
-            http.Error(w, err.Error(), http.StatusInternalServerError)
-            return
-        }   
+    var contractsResponse []map[string]interface{}
+    for _, contract := range contracts {
+        contractResponse := map[string]interface{}{
+            "contract_id": contract.Id_contract,
+            "name_contract": contract.Name_contract,
+            "date_create_contract": contract.Data_contract_create,
+            "user_id": contract.Id_user,
+            "data_conclusion": contract.Data_conclusion,
+            "data_start": contract.Data_contract_create,
+            "data_end": contract.Data_end,
+            "id_type": contract.Id_type,
+            "name_type_contract": contract.Name_type,
+            "id_counterparty": contract.Id_counterparty,
+            "name_counterparty": contract.Name_counterparty,
+            "id_status_contract": contract.Id_status_contract,
+            "name_status_contract": contract.Name_status_contract,
+            "id_teg": contract.Id_teg_contract,
+            "name_teg": contract.Tegs_contract,
+        }
+        contractsResponse = append(contractsResponse, contractResponse)
+    }
+    data, err:=json.Marshal(contractsResponse)  
+    if err != nil {
+        http.Error(w, err.Error(), http.StatusInternalServerError)
+        return
+    }
+    w.WriteHeader(http.StatusOK)
+    w.Write(data)
+        
 }
 
 
@@ -81,11 +170,13 @@ func PostCreateContract(w http.ResponseWriter, r *http.Request) {
     var contract models.Contracts
     err:=json.NewDecoder(r.Body).Decode(&contract)
     if err!=nil{
+        log.Println(err)
         http.Error(w,"Invalid request body PostCreateContract",http.StatusBadRequest)
         return
     }
     err = db.DBaddContract(contract)
     if err != nil {
+        log.Println(err)
         http.Error(w, err.Error(), http.StatusInternalServerError)
         return
     }
@@ -115,28 +206,38 @@ func PutChangeContract(w http.ResponseWriter, r *http.Request) {
 
 
 func PutChangeContractUser(w http.ResponseWriter, r *http.Request) {
-    if r.Method!=http.MethodPut{
-        http.Error(w,"Invalid request method UpdateContractUser",http.StatusBadRequest)
+    if r.Method != http.MethodPut {
+        http.Error(w, "Invalid request method UpdateContractUser", http.StatusBadRequest)
         return
     }
-    userId, err:= strconv.Atoi(r.URL.Query().Get("user_id"))
-    contract_id, err:= strconv.Atoi(r.URL.Query().Get("contract_id"))
+
+    var data map[string]int
+    err := json.NewDecoder(r.Body).Decode(&data)
     if err != nil {
-        http.Error(w, "Invalid user_id", http.StatusBadRequest)
+        http.Error(w, "Invalid request body", http.StatusBadRequest)
         return
     }
-    var contract models.Contracts
-    err=json.NewDecoder(r.Body).Decode(&contract)
-    if err!=nil{
-        http.Error(w,"Invalid request body UpdateContractUser",http.StatusBadRequest)
+
+    contract_id, ok := data["id_contract"]
+    if !ok {
+        http.Error(w, "Missing id_contract in request body", http.StatusBadRequest)
         return
     }
-    err = db.DBchangeContractUser(userId,contract_id)
-    if err != nil { 
-        http.Error(w, err.Error(), http.StatusInternalServerError)        
+
+    userId, ok := data["id_user"]
+    if !ok {
+        http.Error(w, "Missing id_user in request body", http.StatusBadRequest)
         return
-        
     }
+
+    err = db.DBchangeContractUser(contract_id, userId)
+    if err != nil {
+        http.Error(w, err.Error(), http.StatusInternalServerError)
+        return
+    }
+
+    w.WriteHeader(http.StatusOK)
+    json.NewEncoder(w).Encode(map[string]string{"message": "Contract user updated successfully"})
 }
 
 func DeleteContract(w http.ResponseWriter, r *http.Request) {
@@ -144,12 +245,13 @@ func DeleteContract(w http.ResponseWriter, r *http.Request) {
         http.Error(w,"Invalid request method DeleteContract",http.StatusBadRequest)
         return
     }
-    constantId, err:= strconv.Atoi(r.URL.Query().Get("contract_id"))
+    vars:=mux.Vars(r)
+    contractId, err := strconv.Atoi(vars["contractID"])
     if err != nil {
         http.Error(w, "Invalid contract_id", http.StatusBadRequest)
         return
     }
-    err =db.DBdeleteContract(constantId)
+    err =db.DBdeleteContract(contractId)
     if err !=nil{
         http.Error(w, err.Error(), http.StatusInternalServerError)
         return
