@@ -13,11 +13,15 @@ func NewRouter() *mux.Router {
     router.HandleFunc("/api/authorizations ", handlers.Login).Methods("POST")
     router.HandleFunc("/api/forgot-password", handlers.PutForgotPassword).Methods("PUT")
 
+
     // Вызов маршрутов
+router.HandleFunc("/", handlers.Index).Methods("GET")
     UserRoutes(router)
     ContractRoutes(router)
     StageRoutes(router)
     // NotificationRoutes(router)
+
+    
 
     return router
 }

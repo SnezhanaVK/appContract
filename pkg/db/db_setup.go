@@ -181,7 +181,7 @@ _, err = db.Exec(`CREATE TABLE if not exists stages (
 	_, err = db.Exec(`CREATE TABLE if not exists files (
     id_file SERIAL PRIMARY KEY,
     name_file VARCHAR(255) NOT NULL,
-    data bytea NOT NULL,
+    data byte NOT NULL,
     type_file VARCHAR(255) NOT NULL,
     id_stage int NOT NULL,
     CONSTRAINT id_stage FOREIGN KEY (id_stage) REFERENCES stages(id_stage) ON DELETE CASCADE

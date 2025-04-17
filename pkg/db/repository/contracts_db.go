@@ -4,7 +4,6 @@ import (
 	"appContract/pkg/db"
 	"appContract/pkg/models"
 	"errors"
-	"fmt"
 	"log"
 )
 
@@ -374,7 +373,8 @@ func DBchangeContractUser(id_contract int, id_user int) error {
     if !exists {
         return errors.New("id_user не существует в таблице users")
     }
-	// Проверяем, существует ли id_contract в таблице contracts
+
+    // Проверяем, существует ли id_contract в таблице contracts
     exists = false
     err = conn.QueryRow(`SELECT EXISTS(SELECT 1 FROM contracts WHERE id_contract = $1)`, id_contract).Scan(&exists)
     if err != nil {
@@ -384,20 +384,22 @@ func DBchangeContractUser(id_contract int, id_user int) error {
         return errors.New("id_contract не существует в таблице contracts")
     }
 
-    _, err = conn.Exec(`
+    // Обновляем таблицу contracts
+    result, err := conn.Exec(`
         UPDATE contracts
         SET id_user = $2
         WHERE id_contract = $1
     `, id_contract, id_user)
 
     if err != nil {
-        // Отловим ошибку и получим подробное сообщение об ошибке
-        if pgErr, ok := err.(*pg.Error); ok {
-            return errors.Wrap(err, fmt.Sprintf("Ошибка базы данных: %v, Код ошибки: %v, Подробное сообщение об ошибке: %v", pgErr.Message, pgErr.Code, pgErr.Detail))
-        } else {
-            return errors.Wrap(err, "Ошибка базы данных")
-        }
+        return err
     }
+
+    rowsAffected := result.RowsAffected()
+    if rowsAffected == 0 {
+        return errors.New("id_contract или id_user не существует в таблице contracts")
+    }
+
     return nil
 }
 
