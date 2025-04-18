@@ -14,6 +14,6 @@ func (s *UserService) GetAdmin(id int) (bool, error) {
 	return db.GetAddmin(id)
 }
 
-func (s *UserService) ChangePassword(id int, password string) error {
-	return db.ChangePassword(id, password)
+func (s *UserService) ChangePassword(login string, password string) error {
+	return db.ChangePassword(login, password)
 }

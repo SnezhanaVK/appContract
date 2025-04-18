@@ -40,6 +40,7 @@ func GetAllStages(w http.ResponseWriter, r *http.Request) {
             "email": stage.Email,
             "description": stage.Description,
             "status_stage": stage.Id_status_stage,
+            "date_change_status": stage.Date_change_status,
             "name_status_stage": stage.Name_status_stage,
             "date_create_start": stage.Date_create_start,
             "date_create_end": stage.Date_create_end,
@@ -422,25 +423,43 @@ func PostCreateStage(w http.ResponseWriter, r *http.Request) {
     json.NewEncoder(w).Encode(map[string]string{"message": "Stage created successfully"})
 }
 
-func PostAddComment (w http.ResponseWriter, r *http.Request) {
+func PostAddComment(w http.ResponseWriter, r *http.Request) {
     if r.Method != http.MethodPost {
         http.Error(w, "Invalid request method CreateComment", http.StatusBadRequest)
         return
     }
-    var comment models.Stages
-    err := json.NewDecoder(r.Body).Decode(&comment)
+    
+    vars := mux.Vars(r)
+    idStage, err := strconv.Atoi(vars["stageID"])
+    if err != nil {
+        http.Error(w, "Invalid idStage", http.StatusBadRequest)
+        return
+    }
+
+    idStatusStage, err := strconv.Atoi(vars["idStatusStage"])
+    if err != nil {
+        http.Error(w, "Invalid idStatusStage", http.StatusBadRequest)
+        return
+    }
+var comment models.Stages
+    
+    err = json.NewDecoder(r.Body).Decode(&comment)
     if err != nil {
         http.Error(w, "Invalid request body CreateComment", http.StatusBadRequest)
         return
     }
-    err = db.DBaddComment(comment)
+
+    err = db.DBaddComment(idStage, idStatusStage, comment.Comment)
     if err != nil {
         http.Error(w, err.Error(), http.StatusInternalServerError)
         return
     }
+
     w.WriteHeader(http.StatusCreated)
     json.NewEncoder(w).Encode(map[string]string{"message": "Comment created successfully"})
 }
+
+
 
 
 func PutStageStatus(w http.ResponseWriter, r *http.Request) {
@@ -455,7 +474,13 @@ func PutStageStatus(w http.ResponseWriter, r *http.Request) {
         http.Error(w, "Invalid request body PutStageStatus", http.StatusBadRequest)
         return
     }
-    err = db.DBChengeStatusStage(stage.Id_stage, stage.Id_status_stage,stage.Comment )
+    
+    if stage.Id_stage == 0 || stage.Id_status_stage == 0 || stage.Comment == "" {
+        http.Error(w, "Invalid request body PutStageStatus", http.StatusBadRequest)
+        return
+    }
+    
+    err = db.DBChengeStatusStage(stage.Id_stage, stage.Id_status_stage, stage.Comment)
     if err != nil {
         http.Error(w, err.Error(), http.StatusInternalServerError)
         return
@@ -511,6 +536,26 @@ func DeleteStage(w http.ResponseWriter, r *http.Request) {
         http.Error(w, "Stage not found", http.StatusNotFound)
         return
     }
+}
+
+func DeleteComment(w http.ResponseWriter, r *http.Request) {
+    if r.Method != http.MethodDelete {
+        http.Error(w, "Invalid request method DeleteComment", http.StatusBadRequest)
+        return
+    }
+    vars := mux.Vars(r)
+    idComment, err := strconv.Atoi(vars["idComment"])
+    if err != nil {
+        http.Error(w, "Invalid idComment", http.StatusBadRequest)
+        return
+    }
+    err = db.DBdeleteComment(idComment)
+    if err != nil {
+        http.Error(w, err.Error(), http.StatusInternalServerError)
+        return
+    }
+    w.WriteHeader(http.StatusOK)
+    json.NewEncoder(w).Encode(map[string]string{"message": "Comment deleted successfully"})
 }
 
 

@@ -5,8 +5,8 @@ import (
 	"appContract/pkg/models"
 	"errors"
 	"log"
+	"time"
 )
-
 
 func DBgetContractAll() ([]models.Contracts, error) {//сделать вывод информации по внешним ключам
 	// соединение с бд
@@ -24,9 +24,9 @@ func DBgetContractAll() ([]models.Contracts, error) {//сделать вывод
         u.surname,
         u.username,
         u.patronymic,
-        c.data_conclusion,
+        c.date_conclusion,
 		c.date_create_contract,
-        c.data_end,
+        c.date_end,
         c.id_type,
         tc.name_type_contract,
         c.id_counterparty,
@@ -65,9 +65,245 @@ func DBgetContractAll() ([]models.Contracts, error) {//сделать вывод
 		&contract.Surname,
 		&contract.Username,
 		&contract.Patronymic,
-		&contract.Data_conclusion,
-		&contract.Data_contract_create,
-		&contract.Data_end,
+		&contract.Date_conclusion,
+		&contract.Date_contract_create,
+		&contract.Date_end,
+		&contract.Id_type,
+		&contract.Name_type,
+		&contract.Id_counterparty,
+		&contract.Name_counterparty,
+		&contract.Id_status_contract,
+		&contract.Name_status_contract,
+		&contract.Id_teg_contract,
+		&contract.Tegs_contract,
+		)
+		if err != nil {
+			return nil, err
+		}
+		contracts = append(contracts, contract)
+	}
+	
+	return contracts, nil
+}
+//Sort 
+func DBgetContractByType(idType int) ([]models.Contracts, error) {
+    // соединение с бд
+    conn, err := db.ConnectDB()
+    if err != nil {
+        return nil, err
+    }
+    defer conn.Close()
+
+    // запрос к бд
+    rows, err := conn.Query(`
+        SELECT c.id_contract,
+            c.name_contract,
+            c.id_user,
+            u.surname,
+            u.username,
+            u.patronymic,
+            c.date_conclusion,
+            c.date_create_contract,
+            c.date_end,
+            c.id_type,
+            tc.name_type_contract,
+            c.id_counterparty,
+            cp.name_counterparty,
+            c.id_status_contract,
+            sc.name_status_contract,
+            cbt.id_teg,
+            t.name_teg
+        FROM contracts c
+        JOIN 
+            users u ON c.id_user = u.id_user
+        JOIN 
+            types_contracts tc ON c.id_type = tc.id_type_contract
+        JOIN 
+            counterparty cp ON c.id_counterparty = cp.id_counterparty
+        JOIN 
+            status_contracts sc ON c.id_status_contract = sc.id_status_contract
+        JOIN 
+            contracts_by_tegs cbt ON c.id_contract = cbt.id_contract
+        JOIN 
+            tegs t ON cbt.id_teg = t.id_teg
+        WHERE c.id_type = $1
+    `, idType)
+    if err != nil {
+        return nil, err
+    }
+    defer rows.Close()
+
+    // обработка результата
+    var contracts []models.Contracts
+    for rows.Next() {
+        var contract models.Contracts
+        err = rows.Scan(
+            &contract.Id_contract,
+            &contract.Name_contract,
+            &contract.Id_user,
+            &contract.Surname,
+            &contract.Username,
+            &contract.Patronymic,
+            &contract.Date_conclusion,
+            &contract.Date_contract_create,
+            &contract.Date_end,
+            &contract.Id_type,
+            &contract.Name_type,
+            &contract.Id_counterparty,
+            &contract.Name_counterparty,
+            &contract.Id_status_contract,
+            &contract.Name_status_contract,
+            &contract.Id_teg_contract,
+            &contract.Tegs_contract,
+        )
+        if err != nil {
+            return nil, err
+        }
+        contracts = append(contracts, contract)
+    }
+
+    return contracts, nil
+}
+func DBgetContractsByDateCreate(startDate, endDate time.Time) ([]models.Contracts, error) {
+    // соединение с бд
+    conn, err := db.ConnectDB()
+    if err != nil {
+        return nil, err
+    }
+    defer conn.Close()
+
+    // запрос к бд
+    rows, err := conn.Query(`
+        SELECT c.id_contract,
+            c.name_contract,
+            c.id_user,
+            u.surname,
+            u.username,
+            u.patronymic,
+            c.date_conclusion,
+            c.date_create_contract,
+            c.date_end,
+            c.id_type,
+            tc.name_type_contract,
+            c.id_counterparty,
+            cp.name_counterparty,
+            c.id_status_contract,
+            sc.name_status_contract,
+            cbt.id_teg,
+            t.name_teg
+        FROM contracts c
+        JOIN 
+            users u ON c.id_user = u.id_user
+        JOIN 
+            types_contracts tc ON c.id_type = tc.id_type_contract
+        JOIN 
+            counterparty cp ON c.id_counterparty = cp.id_counterparty
+        JOIN 
+            status_contracts sc ON c.id_status_contract = sc.id_status_contract
+        JOIN 
+            contracts_by_tegs cbt ON c.id_contract = cbt.id_contract
+        JOIN 
+            tegs t ON cbt.id_teg = t.id_teg
+        WHERE c.date_create_contract >= $1 AND c.date_create_contract <= $2
+        ORDER BY c.date_create_contract
+    `, startDate, endDate)
+    if err != nil {
+        return nil, err
+    }
+    defer rows.Close()
+
+    // обработка результата
+    var contracts []models.Contracts
+    for rows.Next() {
+        var contract models.Contracts
+        err = rows.Scan(
+            &contract.Id_contract,
+            &contract.Name_contract,
+            &contract.Id_user,
+            &contract.Surname,
+            &contract.Username,
+            &contract.Patronymic,
+            &contract.Date_conclusion,
+            &contract.Date_contract_create,
+            &contract.Date_end,
+            &contract.Id_type,
+            &contract.Name_type,
+            &contract.Id_counterparty,
+            &contract.Name_counterparty,
+            &contract.Id_status_contract,
+            &contract.Name_status_contract,
+            &contract.Id_teg_contract,
+            &contract.Tegs_contract,
+        )
+        if err != nil {
+            return nil, err
+        }
+        contracts = append(contracts, contract)
+    }
+
+    return contracts, nil
+}
+func DBgetContractsByTegs() ([]models.Contracts, error) {//сделать вывод информации по внешним ключам
+	// соединение с бд
+	conn, err := db.ConnectDB()
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+
+	// запрос к бд
+	rows, err := conn.Query(`
+	   SELECT c.id_contract,
+            c.name_contract,
+            c.id_user,
+            u.surname,
+            u.username,
+            u.patronymic,
+            c.date_conclusion,
+            c.date_create_contract,
+            c.date_end,
+            c.id_type,
+            tc.name_type_contract,
+            c.id_counterparty,
+            cp.name_counterparty,
+            c.id_status_contract,
+            sc.name_status_contract,
+            cbt.id_teg,
+            t.name_teg
+        FROM contracts c
+        JOIN 
+            users u ON c.id_user = u.id_user
+        JOIN 
+            types_contracts tc ON c.id_type = tc.id_type_contract
+        JOIN 
+            counterparty cp ON c.id_counterparty = cp.id_counterparty
+        JOIN 
+            status_contracts sc ON c.id_status_contract = sc.id_status_contract
+        JOIN 
+            contracts_by_tegs cbt ON c.id_contract = cbt.id_contract
+        JOIN 
+            tegs t ON cbt.id_teg = t.id_teg
+        ORDER BY cbt.id_teg
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	// обработка результата
+	var contracts []models.Contracts
+	for rows.Next() {
+		var contract models.Contracts	
+		err=rows.Scan(
+		&contract.Id_contract,
+		&contract.Name_contract,
+		&contract.Id_user,
+		&contract.Surname,
+		&contract.Username,
+		&contract.Patronymic,
+		&contract.Date_conclusion,
+		&contract.Date_contract_create,
+		&contract.Date_end,
 		&contract.Id_type,
 		&contract.Name_type,
 		&contract.Id_counterparty,
@@ -86,6 +322,85 @@ func DBgetContractAll() ([]models.Contracts, error) {//сделать вывод
 	return contracts, nil
 }
 
+func DBgetContractsByStatus() ([]models.Contracts, error) {
+    // соединение с бд
+    conn, err := db.ConnectDB()
+    if err != nil {
+        return nil, err
+    }
+    defer conn.Close()
+
+    // запрос к бд
+    rows, err := conn.Query(`
+        SELECT c.id_contract,
+            c.name_contract,
+            c.id_user,
+            u.surname,
+            u.username,
+            u.patronymic,
+            c.date_conclusion,
+            c.date_create_contract,
+            c.date_end,
+            c.id_type,
+            tc.name_type_contract,
+            c.id_counterparty,
+            cp.name_counterparty,
+            c.id_status_contract,
+            sc.name_status_contract,
+            cbt.id_teg,
+            t.name_teg
+        FROM contracts c
+        JOIN 
+            users u ON c.id_user = u.id_user
+        JOIN 
+            types_contracts tc ON c.id_type = tc.id_type_contract
+        JOIN 
+            counterparty cp ON c.id_counterparty = cp.id_counterparty
+        JOIN 
+            status_contracts sc ON c.id_status_contract = sc.id_status_contract
+        JOIN 
+            contracts_by_tegs cbt ON c.id_contract = cbt.id_contract
+        JOIN 
+            tegs t ON cbt.id_teg = t.id_teg
+        ORDER BY c.id_status_contract
+    `)
+    if err != nil {
+        return nil, err
+    }
+    defer rows.Close()
+
+    // обработка результата
+    var contracts []models.Contracts
+    for rows.Next() {
+        var contract models.Contracts
+        err = rows.Scan(
+            &contract.Id_contract,
+            &contract.Name_contract,
+            &contract.Id_user,
+            &contract.Surname,
+            &contract.Username,
+            &contract.Patronymic,
+            &contract.Date_conclusion,
+            &contract.Date_contract_create,
+            &contract.Date_end,
+            &contract.Id_type,
+            &contract.Name_type,
+            &contract.Id_counterparty,
+            &contract.Name_counterparty,
+            &contract.Id_status_contract,
+            &contract.Name_status_contract,
+            &contract.Id_teg_contract,
+            &contract.Tegs_contract,
+        )
+        if err != nil {
+            return nil, err
+        }
+        contracts = append(contracts, contract)
+    }
+
+    return contracts, nil
+}
+
 func DBgetContractID(contractID int) ([]models.Contracts, error) {
 	// соединение с бд
 	conn, err := db.ConnectDB()
@@ -102,8 +417,8 @@ func DBgetContractID(contractID int) ([]models.Contracts, error) {
     u.surname,
     u.username,
     u.patronymic,
-    c.data_conclusion,
-    c.data_end,
+    c.date_conclusion,
+    c.date_end,
 	c.date_create_contract,
     c.id_type,
     tc.name_type_contract,
@@ -145,9 +460,9 @@ WHERE
     &contract.Surname,
     &contract.Username,
     &contract.Patronymic,
-    &contract.Data_conclusion,
-    &contract.Data_end,
-	&contract.Data_contract_create,
+    &contract.Date_conclusion,
+    &contract.Date_end,
+	&contract.Date_contract_create,
     &contract.Id_type,
     &contract.Name_type,
     &contract.Id_counterparty,
@@ -182,8 +497,8 @@ func DBgetContractUserId(user_id int) ([]models.Contracts, error) {
             u.patronymic,
             u.phone,
             u.email,
-            c.data_conclusion,
-            c.data_end,
+            c.date_conclusion,
+            c.date_end,
             c.id_type,
             tc.name_type_contract,
             c.cost,
@@ -221,15 +536,15 @@ func DBgetContractUserId(user_id int) ([]models.Contracts, error) {
         var contract models.Contracts
         err = rows.Scan(&contract.Id_contract,
 					    &contract.Name_contract, 
-						&contract.Data_contract_create, 
+						&contract.Date_contract_create, 
 						&contract.Id_user, 
 						&contract.Surname, 
 						&contract.Username, 
 						&contract.Patronymic, 
 						&contract.Phone, 
 						&contract.Email, 
-						&contract.Data_conclusion, 
-						&contract.Data_end, 
+						&contract.Date_conclusion, 
+						&contract.Date_end, 
 						&contract.Id_type, 
 						&contract.Name_type, 
 						&contract.Cost, 
@@ -274,8 +589,8 @@ func DBaddContract(contract models.Contracts)error{
   name_contract,
   date_create_contract,
   id_user,
-  data_conclusion,
-  data_end,
+  date_conclusion,
+  date_end,
   id_type,
   cost,
   object_contract,
@@ -289,10 +604,10 @@ func DBaddContract(contract models.Contracts)error{
 		)
 		`,
 		contract.Name_contract,
-		contract.Data_contract_create,
+		contract.Date_contract_create,
 		contract.Id_user,
-		contract.Data_conclusion,
-		contract.Data_end,
+		contract.Date_conclusion,
+		contract.Date_end,
 		contract.Id_type,
 		contract.Cost,
 		contract.Object_contract,
@@ -321,8 +636,8 @@ func DBchangeContract(contract models.Contracts) error{
 		name_contract = $1,
 		date_create_contract = $2,
 		id_user = $3,
-		data_conclusion = $4,
-		data_end = $5,
+		date_conclusion = $4,
+		date_end = $5,
 		id_type = $6,
 		cost = $7,
 		object_contract = $8,
@@ -335,10 +650,10 @@ func DBchangeContract(contract models.Contracts) error{
 		`,
 		
 		contract.Name_contract,
-		contract.Data_contract_create,
+		contract.Date_contract_create,
 		contract.Id_user,
-		contract.Data_conclusion,
-		contract.Data_end,
+		contract.Date_conclusion,
+		contract.Date_end,
 		contract.Id_type,
 		contract.Cost,
 		contract.Object_contract,

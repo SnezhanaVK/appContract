@@ -8,10 +8,10 @@ type Contracts struct {
 	
 	Id_contract     int       `json:"id_contract"`
 	Name_contract   string    `json:"name_contract"`
-	Data_contract_create   time.Time    `json:"data_contract_create"`
+	Date_contract_create   time.Time    `json:"date_contract_create"`
 	Id_user         int       `json:"id_user"`
-	Data_conclusion time.Time `json:"data_conclusion"`
-	Data_end        time.Time `json:"data_end"`
+	Date_conclusion time.Time `json:"date_conclusion"`
+	Date_end        time.Time `json:"date_end"`
 	Id_type         int       `json:"id_type"`
 	Cost            int       `json:"cost"`
 	Object_contract string    `json:"object_contract"`
@@ -39,18 +39,18 @@ type Contracts struct {
 
 }
 
-type Tegs struct {
-	Id_tegs   int    `json:"id_tegs"`
-	Name_tegs string `json:"name_tegs"`
-}
+// type Tegs struct {
+// 	Id_tegs   int    `json:"id_tegs"`
+// 	Name_tegs string `json:"name_tegs"`
+// }
 
-type Type_contracts struct {
-	Id_type_contract    int    `json:"id_type_contract"`
-	Name_type_contract   string `json:"d_type_contract"`
+// type Type_contracts struct {
+// 	Id_type_contract    int    `json:"id_type_contract"`
+// 	Name_type_contract   string `json:"d_type_contract"`
 	
-}
+// }
 
-type Status_contracts struct {
-	Id_status_contract int    `json:"id_status_contract"`
-	Name_status_contract        string `json:"name_status_contract"`
-}
+// type Status_contracts struct {
+// 	Id_status_contract int    `json:"id_status_contract"`
+// 	Name_status_contract        string `json:"name_status_contract"`
+// }

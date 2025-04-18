@@ -2,7 +2,9 @@ package handlers
 
 import (
 	db "appContract/pkg/db/repository"
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"time"
 
@@ -52,6 +54,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
     // Создаем токен авторизации
     token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
         "login": login,
+        "password" : password,
         "exp":   time.Now().Add(time.Hour * 72).Unix(),
     })
 
@@ -66,7 +69,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
     json.NewEncoder(w).Encode(Token{Token: tokenString})
 }
 
-func Authenticate(w http.ResponseWriter, r *http.Request) {
+func VerificationToken (w http.ResponseWriter, r *http.Request) {
     tokenString := r.Header.Get("Authorization")
     if tokenString == "" {
         http.Error(w, "Token is required", http.StatusBadRequest)
@@ -92,13 +95,27 @@ func Authenticate(w http.ResponseWriter, r *http.Request) {
         http.Error(w, "Invalid token", http.StatusUnauthorized)
         return
     }
-
-    id, err := db.Authorize(login, "")
+    
+    _, err = db.GetUser(login)
+   if err != nil {
+        if errors.Is(err, sql.ErrNoRows) {
+            http.Error(w, "Пользователь не найден", http.StatusUnauthorized)
+            return
+        }
+        http.Error(w, err.Error(), http.StatusInternalServerError)
+        return
+    }
+    password := claims["password"].(string)
+    if password == "" {
+        http.Error(w, "Invalid token", http.StatusUnauthorized)
+        return
+    }
+   id, err := db.Authorize(login,password)
     if err != nil {
         http.Error(w, err.Error(), http.StatusUnauthorized)
         return
     }
-
+    
     isAdmin, err := db.GetAddmin(id)
     if err != nil {
         http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -117,25 +134,32 @@ func PutForgotPassword(w http.ResponseWriter, r *http.Request) {
         http.Error(w, "Invalid request method", http.StatusBadRequest)
         return 
     }
-    var authRequest LoginStruct
-    err:=json.NewDecoder(r.Body).Decode(&authRequest)
-    if err!=nil{
-        http.Error(w,"Invalid request body PutChangePassword",http.StatusBadRequest)
+    var authRequest struct {
+        Login    string `json:"login"`
+        Password string `json:"password"`
+    }
+    err := json.NewDecoder(r.Body).Decode(&authRequest)
+    if err != nil {
+        http.Error(w, "Invalid request body PutChangePassword", http.StatusBadRequest)
         return
     }
-    if authRequest.ID==0 || authRequest.Password==""{
-        http.Error(w,"Invalid request body PutChangePassword",http.StatusBadRequest)
+    if authRequest.Login == "" || authRequest.Password == "" {
+        http.Error(w, "Invalid request body PutChangePassword", http.StatusBadRequest)
         return
     }
-    err=db.ChangePassword(authRequest.ID,authRequest.Password)
-    if err!=nil{
-        http.Error(w,err.Error(),http.StatusInternalServerError)
+    user, err := db.GetUser(authRequest.Login)
+    if err != nil {
+        http.Error(w, err.Error(), http.StatusInternalServerError)
+        return
+    }
+    err = db.ChangePassword(user.Login, authRequest.Password)
+    if err != nil {
+        http.Error(w, err.Error(), http.StatusInternalServerError)
         return
     }
     w.WriteHeader(http.StatusOK)
     json.NewEncoder(w).Encode(map[string]string{"message": "Password updated successfully"})
- 
-} 
+}
 
 func GetUsers(w http.ResponseWriter, r *http.Request) {
     if r.Method != http.MethodGet {

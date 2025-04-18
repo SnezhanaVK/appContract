@@ -20,7 +20,7 @@ func Authorize(login string, password string) (int, error) {
     }()
 
     var user models.Users
-    err = conn.QueryRow(`SELECT id ,login, password FROM users WHERE login=$1 AND password=$2`, 
+    err = conn.QueryRow(`SELECT id_user ,login, password FROM users WHERE login=$1 AND password=$2`, 
                         login, password).Scan(&user.Id_user, &user.Login, &user.Password)
 
     if err != nil {
@@ -33,25 +33,31 @@ func Authorize(login string, password string) (int, error) {
     return user.Id_user, nil
 }
 
-func GetAddmin(id int)(bool,error){
-	conn,err:=db.ConnectDB()
-	if err!=nil{
-		log.Fatal(err)
-	}
-	var isAdmin bool
-	defer conn.Close()
-	err=conn.QueryRow(`Select id, admin from users where id=$1`,id).Scan(isAdmin)
-	if err !=nil{
-		if err==sql.ErrNoRows{
-			return false, errors.New("user not found")
-		}
-		return false, err
-	}
-	return isAdmin, nil
+func GetAddmin(id int) (bool, error) {
+    conn, err := db.ConnectDB()
+    if err != nil {
+        log.Fatal(err)
+    }
+    defer conn.Close()
+
+    var isAdmin sql.NullBool
+    err = conn.QueryRow(`SELECT admin FROM users WHERE id_user=$1`, id).Scan(&isAdmin)
+    if err != nil {
+        if err == sql.ErrNoRows {
+            return false, errors.New("user not found")
+        }
+        return false, err
+    }
+
+    if !isAdmin.Valid {
+        return false, errors.New("admin value is null")
+    }
+
+    return isAdmin.Bool, nil
 }
 
 
-func ChangePassword(id int, password string)error{
+func ChangePassword(login string, password string)error{
 	if password==""{
 		return errors.New("password is required")
 	}
@@ -60,35 +66,38 @@ func ChangePassword(id int, password string)error{
 		return err
 	}
 	defer conn.Close()
-	_,err=conn.Exec(`UPDATE users SET password=$1 WHERE id=$2`,password,id)
+	_,err=conn.Exec(`UPDATE users SET password=$1 WHERE login=$2`,password,login)
 	if err!=nil{
 		return err
 	}
 	return nil
 }
 
-func GetUser(email string) (models.Users, error) {
-	conn, err := db.ConnectDB()
-	if err != nil {
-		return models.Users{}, err
-	}
-	defer conn.Close()
+func GetUser(login string) (models.Users, error) {
+    conn, err := db.ConnectDB()
+    if err != nil {
+        log.Println(err)
+        return models.Users{}, err
+    }
+    defer conn.Close()
 
-	var user models.Users
+    var user models.Users
 
-	err = conn.QueryRow(`SELECT id_user, email, login, password FROM users WHERE email = $1`, email).Scan(
-		&user.Id_user,
-		&user.Email,
-		&user.Login,
-		&user.Password,
-	)
+    err = conn.QueryRow(`SELECT id_user, email, login, password FROM users WHERE login = $1`, login).Scan(
+        &user.Id_user,
+        &user.Email,
+        &user.Login,
+        &user.Password,
+    )
 
-	if err != nil {
-		if err == sql.ErrNoRows {	
-			return models.Users{}, errors.New("user not found")
-		}
-		return models.Users{}, err
-	}
+    if err != nil {
+        log.Println(err)
+        if err == sql.ErrNoRows {
+            return models.Users{}, errors.New("Пользователь не найден")
+        }
+        return models.Users{}, err
+    }
 
-	return user, nil
+    log.Println("User found:", user)
+    return user, nil
 }
