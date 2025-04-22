@@ -32,7 +32,7 @@ func GetAllContracts(w http.ResponseWriter, r *http.Request) {
         var tegs []map[string]interface{}
         for _, teg := range contract.Tegs {
             tegs = append(tegs, map[string]interface{}{
-                "id_teg":   teg.Id_tegs,
+               /// "id_teg":   teg.Id_tegs,
                 "name_teg": teg.Name_tegs,
             })
         }
