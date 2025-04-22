@@ -272,53 +272,71 @@ func GetAllContractsByStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetContractID(w http.ResponseWriter, r *http.Request) {
-    if r.Method!=http.MethodGet{
-        http.Error(w,"Invalid request method GetContract",http.StatusBadRequest)
+    if r.Method != http.MethodGet {
+        http.Error(w, "Invalid request method GetContract", http.StatusBadRequest)
         return
     }
-    vars:=mux.Vars(r)
-    contractId:=vars["contractID"]
-    if contractId==""{
-        http.Error(w,"Invalid contract_id",http.StatusBadRequest)
+
+    vars := mux.Vars(r)
+    contractId := vars["contractID"]
+    if contractId == "" {
+        http.Error(w, "Invalid contract_id", http.StatusBadRequest)
         return
     }
-    id, err:= strconv.Atoi(contractId)
+
+    id, err := strconv.Atoi(contractId)
     if err != nil {
         http.Error(w, "Invalid contract_id", http.StatusBadRequest)
         return
     }
-   
-    contract, err := db.DBgetContractID(id)
+
+    contracts, err := db.DBgetContractID(id)
     if err != nil {
         http.Error(w, err.Error(), http.StatusInternalServerError)
         return
     }
-    var contractsResponse []map[string]interface{}
-    for _, contract := range contract {
-        contractResponse := map[string]interface{}{
-            "contract_id": contract.Id_contract,
-            "name_contract": contract.Name_contract,
-            "date_create_contract": contract.Date_contract_create,
-            "user_id": contract.Id_user,
-            "date_conclusion": contract.Date_conclusion,
-            "date_start": contract.Date_contract_create,
-            "data_end": contract.Date_end,
-            "id_type": contract.Id_type,
-            "name_type_contract": contract.Name_type,
-            "id_counterparty": contract.Id_counterparty,
-            "name_counterparty": contract.Name_counterparty,
-            "id_status_contract": contract.Id_status_contract,
-            "name_status_contract": contract.Name_status_contract,
-            "id_teg": contract.Id_teg_contract,
-            "name_teg": contract.Tegs_contract,
-        }
-        contractsResponse = append(contractsResponse, contractResponse)
+
+    // Проверяем, что контракт найден
+    if len(contracts) == 0 {
+        http.Error(w, "Contract not found", http.StatusNotFound)
+        return
     }
-    data, err:=json.Marshal(contractsResponse)
+
+    // Берем первый контракт (должен быть только один)
+    contract := contracts[0]
+
+    // Создаем массив для тегов
+    var tegs []map[string]interface{}
+    for _, teg := range contract.Tegs {
+        tegs = append(tegs, map[string]interface{}{
+            "id_teg":   teg.Id_tegs,
+            "name_teg": teg.Name_tegs,
+        })
+    }
+
+    contractResponse := map[string]interface{}{
+        "contract_id":          contract.Id_contract,
+        "name_contract":        contract.Name_contract,
+        "date_create_contract": contract.Date_contract_create,
+        "user_id":             contract.Id_user,
+        "username":             contract.Username,
+        "surname":              contract.Surname,
+        "patronymic":           contract.Patronymic,
+        "date_conclusion":     contract.Date_conclusion,
+        "date_end":            contract.Date_end,
+        "name_type_contract":  contract.Name_type,
+        "name_counterparty":   contract.Name_counterparty,
+        "name_status_contract": contract.Name_status_contract,
+        "tegs":                tegs, // Добавляем массив тегов
+    }
+
+    data, err := json.Marshal(contractResponse)
     if err != nil {
         http.Error(w, err.Error(), http.StatusInternalServerError)
         return
     }
+
+    w.Header().Set("Content-Type", "application/json")
     w.WriteHeader(http.StatusOK)
     w.Write(data)
 }

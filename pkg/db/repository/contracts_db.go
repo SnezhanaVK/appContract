@@ -252,7 +252,8 @@ func DBgetContractsByDateCreate( date models.Date ) ([]models.Contracts, error) 
 
     return contracts, nil
 }
-func DBgetContractsByTegs() ([]models.Contracts, error) {//сделать вывод информации по внешним ключам
+func DBgetContractsByTegs() ([]models.Contracts, error) {
+    //сделать вывод информации по внешним ключам
 	// соединение с бд
 	conn, err := db.ConnectDB()
 	if err != nil {
@@ -418,7 +419,6 @@ func DBgetContractID(contractID int) ([]models.Contracts, error) {
     }
     defer conn.Close()
 
-    // Используем агрегатную функцию для сбора тегов в JSON
     rows, err := conn.Query(`
         SELECT 
             c.id_contract,
@@ -436,7 +436,10 @@ func DBgetContractID(contractID int) ([]models.Contracts, error) {
             cp.name_counterparty,
             c.id_status_contract,
             sc.name_status_contract,
-            json_agg(json_build_object('id', t.id_teg, 'name', t.name_teg)) as tegs
+            json_agg(json_build_object(
+                'id_tegs', t.id_teg,  
+                'name_tegs', t.name_teg  
+            )) as tegs
         FROM 
             contracts c
         JOIN users u ON c.id_user = u.id_user
