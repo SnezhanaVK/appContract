@@ -3,58 +3,169 @@ package db
 import (
 	"appContract/pkg/models"
 	"database/sql"
+	"time"
 )
 
-func GetUsersToNotify(db *sql.DB) ([]models.Notification, error) {
+type NotificationRepository struct {
+	db *sql.DB
+}
 
-	// Запрос для получения пользователей, которым нужно отправить уведомления
+func NewNotificationRepository(db *sql.DB) *NotificationRepository {
+	return &NotificationRepository{db: db}
+}
+
+func (r *NotificationRepository) GetPendingNotifications(currentDate time.Time) ([]models.PendingNotification, error) {
+	// Получаем уведомления по контрактам
+	contractNotifications, err := r.getContractNotifications(currentDate)
+	if err != nil {
+		return nil, err
+	}
+
+	// Получаем уведомления по этапам
+	stageNotifications, err := r.getStageNotifications(currentDate)
+	if err != nil {
+		return nil, err
+	}
+
+	// Объединяем результаты
+	return append(contractNotifications, stageNotifications...), nil
+}
+
+func (r *NotificationRepository) getContractNotifications(currentDate time.Time) ([]models.PendingNotification, error) {
 	query := `
-		SELECT u.id_user, u.email, cn.id_notification_settings, cn.variant_notification_settings
-		FROM users u
-		JOIN contract_notifications cn ON u.id_user = cn.id_user
+		SELECT 
+			u.id_user, u.email, 
+			CONCAT(u.surname, ' ', u.username, ' ', u.patronymic) as full_name,
+			ns.id_notification_settings, ns.variant_notification_settings,
+			c.id_contract, c.name_contract, c.date_end, c.notes
+		FROM contract_notifications cn
+		JOIN users u ON cn.id_user = u.id_user
 		JOIN notification_settings ns ON cn.id_notification_settings = ns.id_notification_settings
-		WHERE ns.variant_notification_settings IN ('1', '3', '7')
+		JOIN contracts c ON cn.id_contract = c.id_contract
+		WHERE c.date_end BETWEEN $1 AND $2
 	`
-	rows, err := db.Query(query)
+
+	// Вычисляем диапазон дат для выборки (сегодня + настройки уведомлений)
+	startDate := currentDate
+	endDate := currentDate.AddDate(0, 0, 7) // Максимальный период уведомления - 7 дней
+
+	rows, err := r.db.Query(query, startDate, endDate)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var notifications []models.Notification
+	var notifications []models.PendingNotification
+
 	for rows.Next() {
-		var  notification models.Notification
-		err = rows.Scan(&notification.Id_user, &notification.Email, &notification.Id_notification_settings, &notification.Variant_notification_settings)
+		var recipient models.NotificationRecipient
+		var contract models.ContractNotification
+		var daysBefore int
+
+		err := rows.Scan(
+			&recipient.UserID, &recipient.Email, &recipient.FullName,
+			&recipient.SettingID, &recipient.SettingVariant,
+			&contract.ContractID, &contract.ContractName, &contract.EndDate, &contract.Notes,
+		)
 		if err != nil {
 			return nil, err
 		}
-		notifications = append(notifications, notification)
+
+		// Преобразуем вариант уведомления в дни
+		switch recipient.SettingVariant {
+		case "1":
+			daysBefore = 1
+		case "3":
+			daysBefore = 3
+		case "7":
+			daysBefore = 7
+		default:
+			continue // Пропускаем неизвестные варианты
+		}
+
+		// Вычисляем дату, когда нужно отправить уведомление
+		notifyDate := contract.EndDate.AddDate(0, 0, -daysBefore)
+
+		// Если сегодня день отправки уведомления
+		if notifyDate.Year() == currentDate.Year() && 
+		   notifyDate.Month() == currentDate.Month() && 
+		   notifyDate.Day() == currentDate.Day() {
+			notifications = append(notifications, models.PendingNotification{
+				Recipient:  recipient,
+				Contract:   &contract,
+				NotifyDate: notifyDate,
+			})
+		}
 	}
+
 	return notifications, nil
 }
 
-func GetContractInfo(db *sql.DB, contractID int) (models.Contracts, error) {
-	// Запрос для получения информации о контракте
+func (r *NotificationRepository) getStageNotifications(currentDate time.Time) ([]models.PendingNotification, error) {
 	query := `
-		SELECT * FROM contracts WHERE id_contract = $1
+		SELECT 
+			u.id_user, u.email, 
+			CONCAT(u.surname, ' ', u.username, ' ', u.patronymic) as full_name,
+			ns.id_notification_settings, ns.variant_notification_settings,
+			s.id_stage, s.name_stage, s.date_create_end, s.description,
+			c.name_contract
+		FROM stage_notifications sn
+		JOIN users u ON sn.id_user = u.id_user
+		JOIN notification_settings ns ON sn.id_notification_settings = ns.id_notification_settings
+		JOIN stages s ON sn.id_stage = s.id_stage
+		JOIN contracts c ON s.id_contract = c.id_contract
+		WHERE s.date_create_end BETWEEN $1 AND $2
 	`
-	var contract models.Contracts
-	err := db.QueryRow(query, contractID).Scan(&contract.Id_contract, &contract.Name_contract, &contract.Date_contract_create, &contract.Id_user, &contract.Date_conclusion, &contract.Date_end, &contract.Id_type, &contract.Cost, &contract.Object_contract, &contract.Term_contract, &contract.Id_counterparty, &contract.Id_status_contract, &contract.Notes, &contract.Condition)
-	if err != nil {
-		return models.Contracts{}, err
-	}
-	return contract, nil
-}
 
-func GetStageInfo(db *sql.DB, stageID int) (models.Stages, error) {
-	// Запрос для получения информации о этапе
-	query := `
-		SELECT * FROM stages WHERE id_stage = $1
-	`
-	var stage models.Stages
-	err := db.QueryRow(query, stageID).Scan(&stage.Id_stage, &stage.Name_stage, &stage.Id_user, &stage.Description, &stage.Date_create_start, &stage.Date_create_end, &stage.Id_contract)
+	startDate := currentDate
+	endDate := currentDate.AddDate(0, 0, 7)
+
+	rows, err := r.db.Query(query, startDate, endDate)
 	if err != nil {
-		return models.Stages{}, err
+		return nil, err
 	}
-	return stage, nil
+	defer rows.Close()
+
+	var notifications []models.PendingNotification
+
+	for rows.Next() {
+		var recipient models.NotificationRecipient
+		var stage models.StageNotification
+		var daysBefore int
+
+		err := rows.Scan(
+			&recipient.UserID, &recipient.Email, &recipient.FullName,
+			&recipient.SettingID, &recipient.SettingVariant,
+			&stage.StageID, &stage.StageName, &stage.EndDate, &stage.Description,
+			&stage.ContractName,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		switch recipient.SettingVariant {
+		case "1":
+			daysBefore = 1
+		case "3":
+			daysBefore = 3
+		case "7":
+			daysBefore = 7
+		default:
+			continue
+		}
+
+		notifyDate := stage.EndDate.AddDate(0, 0, -daysBefore)
+
+		if notifyDate.Year() == currentDate.Year() && 
+		   notifyDate.Month() == currentDate.Month() && 
+		   notifyDate.Day() == currentDate.Day() {
+			notifications = append(notifications, models.PendingNotification{
+				Recipient:  recipient,
+				Stage:      &stage,
+				NotifyDate: notifyDate,
+			})
+		}
+	}
+
+	return notifications, nil
 }

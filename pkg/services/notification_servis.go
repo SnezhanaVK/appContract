@@ -1,85 +1,100 @@
 package service
 
-// import (
-// 	"appContract/pkg/models"
-// 	"database/sql"
-// 	"errors"
-// 	"net/smtp"
-// 	"time"
-// )
+import (
+	db "appContract/pkg/db/repository"
+	"appContract/pkg/models"
+	"appContract/pkg/utils"
+	"fmt"
+	"log"
+	"time"
+)
 
-// func SendNotifications(db *sql.DB) error {
-// 	users, err := db.GetUsersToNotify(db)
-// 	if err != nil {
-// 		return err
-// 	}
+type NotificationService struct {
+	repo    *db.NotificationRepository
+	emailer *utils.EmailSender
+}
 
-// 	for _, user := range users {
-// 		contract, err := db.GetContractInfo(db, user.NotificationSettingsID)
-// 		if err != nil {
-// 			return err
-// 		}
+func NewNotificationService(repo *db.NotificationRepository, emailer *utils.EmailSender) *NotificationService {
+	return &NotificationService{
+		repo:    repo,
+		emailer: emailer,
+	}
+}
 
-// 		stage, err := db.GetStageInfo(db, user.NotificationSettingsID)
-// 		if err != nil {
-// 			return err
-// 		}
+func (s *NotificationService) ProcessDailyNotifications() error {
+	currentDate := time.Now()
+	notifications, err := s.repo.GetPendingNotifications(currentDate)
+	if err != nil {
+		return err
+	}
 
-// 		// Вычислить количество дней для вычитания из текущей даты
-// 		var daysToSubtract int
-// 		switch user.VariantNotificationSettings {
-// 		case "1":
-// 			daysToSubtract = 1
-// 		case "3":
-// 			daysToSubtract = 3
-// 		case "7":
-// 			daysToSubtract = 7
-// 		default:
-// 			return errors.New("неверный вариант уведомления")
-// 		}
+	for _, n := range notifications {
+		content := s.prepareEmailContent(n)
+		if err := s.emailer.SendNotification(n.Recipient.Email, content); err != nil {
+			log.Printf("Failed to send notification to %s: %v", n.Recipient.Email, err)
+			continue
+		}
+		log.Printf("Notification sent to %s", n.Recipient.Email)
+	}
 
-// 		// Проверить, если сегодня день отправки уведомления
-// 		if time.Now().Day() == contract.DateEnd.Day()-daysToSubtract {
-// 			// Отправить уведомление
-// 			err = sendNotification(user.Email, contract, stage)
-// 			if err != nil {
-// 				return err
-// 			}
-// 		}
-// 	}
-// 	return nil
-// }
+	return nil
+}
 
-// func sendNotification(email string, contract models.Contract, stage models.Stage) error {
-// 	// Используйте SMTP для отправки уведомлений
-// 	auth := smtp.PlainAuth("", "your_email", "your_password", "smtp.gmail.com")
+func (s *NotificationService) prepareEmailContent(n models.PendingNotification) utils.EmailContent {
+	if n.Contract != nil {
+		return utils.EmailContent{
+			Subject: "Напоминание о контракте: " + n.Contract.ContractName,
+			Body:    s.generateContractEmailBody(n.Recipient, *n.Contract),
+		}
+	} else {
+		return utils.EmailContent{
+			Subject: "Напоминание о этапе: " + n.Stage.StageName,
+			Body:    s.generateStageEmailBody(n.Recipient, *n.Stage),
+		}
+	}
+}
 
-// 	// Создайте сообщение
-// 	msg := "Уведомление о завершении этапа/контракта"
-// 	to := []string{email}
+func (s *NotificationService) generateContractEmailBody(recipient models.NotificationRecipient, contract models.ContractNotification) string {
+	daysLeft := int(time.Until(contract.EndDate).Hours() / 24)
+	return `
+		<html>
+		<body>
+			<h2>Уведомление о контракте</h2>
+			<p>Уважаемый(ая) ` + recipient.FullName + `,</p>
+			<p>Напоминаем вам о приближающемся сроке завершения контракта:</p>
+			<ul>
+				<li><strong>Контракт:</strong> ` + contract.ContractName + `</li>
+				<li><strong>Дата завершения:</strong> ` + contract.EndDate.Format("02.01.2006") + `</li>
+				<li><strong>Осталось дней:</strong> ` + fmt.Sprintf("%d", daysLeft) + `</li>
+			</ul>
+			<p>Примечания: ` + contract.Notes + `</p>
+			<p>Пожалуйста, примите необходимые меры.</p>
+			<br>
+			<p>С уважением,<br>Система управления контрактами</p>
+		</body>
+		</html>
+	`
+}
 
-// 	// Отправьте уведомление
-// 	err := smtp.SendMail("smtp.gmail.com:587", auth, "your_email", to, []byte(msg))
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	return nil
-// }
-
-// func sendNotification(email string, variant_notification_settings string, contract models.Contracts, stage models.Stages) error {
-//     // Используйте SMTP для отправки уведомлений
-//     auth := smtp.PlainAuth("", "your_email", "your_password", "smtp.gmail.com")
-
-//     // Создайте сообщение
-//     msg := "Уведомление о завершении этапа/контракта"
-// 	to := []string{email}
-
-//     // Отправьте уведомление
-//     err := smtp.SendMail("smtp.gmail.com:587", auth, "your_email", to, []byte(msg))
-//     if err != nil {
-//         return err
-//     }
-
-//     return nil
-// }
+func (s *NotificationService) generateStageEmailBody(recipient models.NotificationRecipient, stage models.StageNotification) string {
+	daysLeft := int(time.Until(stage.EndDate).Hours() / 24)
+	return `
+		<html>
+		<body>
+			<h2>Уведомление о этапе</h2>
+			<p>Уважаемый(ая) ` + recipient.FullName + `,</p>
+			<p>Напоминаем вам о приближающемся сроке завершения этапа:</p>
+			<ul>
+				<li><strong>Этап:</strong> ` + stage.StageName + `</li>
+				<li><strong>Контракт:</strong> ` + stage.ContractName + `</li>
+				<li><strong>Дата завершения:</strong> ` + stage.EndDate.Format("02.01.2006") + `</li>
+				<li><strong>Осталось дней:</strong> ` + fmt.Sprintf("%d", daysLeft) + `</li>
+			</ul>
+			<p>Описание: ` + stage.Description + `</p>
+			<p>Пожалуйста, примите необходимые меры.</p>
+			<br>
+			<p>С уважением,<br>Система управления контрактами</p>
+		</body>
+		</html>
+	`
+}

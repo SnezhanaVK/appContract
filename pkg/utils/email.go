@@ -1,23 +1,47 @@
 package utils
 
 import (
+	"log"
 	"net/smtp"
 )
 
-// отправляет сообщение на SMTP-сервер
-func SendEmail(to string, subject string, body string) error {
+type EmailSender struct {
+	from     string
+	password string
+	smtpHost string
+	smtpPort string
+}
 
-	auth := smtp.PlainAuth("", "your_email@gmail.com", "your_password", "smtp.gmail.com")
+func NewEmailSender(from, password, smtpHost, smtpPort string) *EmailSender {
+	return &EmailSender{
+		from:     from,
+		password: password,
+		smtpHost: smtpHost,
+		smtpPort: smtpPort,
+	}
+}
 
-	
-	msg := []byte("To: " + to + "\r\nSubject: " + subject + "\r\n\r\n" + body)
+type EmailContent struct {
+	Subject string
+	Body    string
+}
 
-	
-	err := smtp.SendMail("smtp.gmail.com:587", auth, "your_email@gmail.com", []string{to}, msg)
+func (e *EmailSender) SendNotification(to string, content EmailContent) error {
+	auth := smtp.PlainAuth("", e.from, e.password, e.smtpHost)
+
+	msg := []byte(
+		"To: " + to + "\r\n" +
+			"Subject: " + content.Subject + "\r\n" +
+			"Content-Type: text/html; charset=UTF-8\r\n" +
+			"\r\n" +
+			content.Body + "\r\n",
+	)
+
+	err := smtp.SendMail(e.smtpHost+":"+e.smtpPort, auth, e.from, []string{to}, msg)
 	if err != nil {
+		log.Printf("Ошибка отправки письма: %v", err)
 		return err
 	}
-
 	return nil
 }
 
