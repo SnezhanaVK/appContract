@@ -1,5 +1,6 @@
 package db
 
+// notifications_db.go в пакете db
 import (
 	"appContract/pkg/models"
 	"database/sql"
@@ -32,75 +33,72 @@ func (r *NotificationRepository) GetPendingNotifications(currentDate time.Time) 
 }
 
 func (r *NotificationRepository) getContractNotifications(currentDate time.Time) ([]models.PendingNotification, error) {
-	query := `
-		SELECT 
-			u.id_user, u.email, 
-			CONCAT(u.surname, ' ', u.username, ' ', u.patronymic) as full_name,
-			ns.id_notification_settings, ns.variant_notification_settings,
-			c.id_contract, c.name_contract, c.date_end, c.notes
-		FROM contract_notifications cn
-		JOIN users u ON cn.id_user = u.id_user
-		JOIN notification_settings ns ON cn.id_notification_settings = ns.id_notification_settings
-		JOIN contracts c ON cn.id_contract = c.id_contract
-		WHERE c.date_end BETWEEN $1 AND $2
-	`
+    query := `
+        SELECT 
+            u.id_user, u.email, 
+            CONCAT(u.surname, ' ', u.username, ' ', u.patronymic) as full_name,
+            ns.id_notification_settings, ns.variant_notification_settings,
+            c.id_contract, c.name_contract, c.date_end, c.notes
+        FROM contract_notifications cn
+        JOIN users u ON cn.id_user = u.id_user
+        JOIN notification_settings ns ON cn.id_notification_settings = ns.id_notification_settings
+        JOIN contracts c ON cn.id_contract = c.id_contract
+        WHERE c.date_end >= $1
+    `
 
-	// Вычисляем диапазон дат для выборки (сегодня + настройки уведомлений)
-	startDate := currentDate
-	endDate := currentDate.AddDate(0, 0, 7) // Максимальный период уведомления - 7 дней
+    // Берем только актуальные контракты (дата окончания в будущем)
+    rows, err := r.db.Query(query, currentDate)
+    if err != nil {
+        return nil, err
+    }
+    defer rows.Close()
 
-	rows, err := r.db.Query(query, startDate, endDate)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
+    var notifications []models.PendingNotification
 
-	var notifications []models.PendingNotification
+    for rows.Next() {
+        var recipient models.NotificationRecipient
+        var contract models.ContractNotification
+        var daysBefore int
 
-	for rows.Next() {
-		var recipient models.NotificationRecipient
-		var contract models.ContractNotification
-		var daysBefore int
+        err := rows.Scan(
+            &recipient.UserID, &recipient.Email, &recipient.FullName,
+            &recipient.SettingID, &recipient.SettingVariant,
+            &contract.ContractID, &contract.ContractName, &contract.EndDate, &contract.Notes,
+        )
+        if err != nil {
+            return nil, err
+        }
 
-		err := rows.Scan(
-			&recipient.UserID, &recipient.Email, &recipient.FullName,
-			&recipient.SettingID, &recipient.SettingVariant,
-			&contract.ContractID, &contract.ContractName, &contract.EndDate, &contract.Notes,
-		)
-		if err != nil {
-			return nil, err
-		}
+        switch recipient.SettingVariant {
+        case "1":
+            daysBefore = 1
+        case "3":
+            daysBefore = 3
+        case "7":
+            daysBefore = 7
+        default:
+            continue
+        }
 
-		// Преобразуем вариант уведомления в дни
-		switch recipient.SettingVariant {
-		case "1":
-			daysBefore = 1
-		case "3":
-			daysBefore = 3
-		case "7":
-			daysBefore = 7
-		default:
-			continue // Пропускаем неизвестные варианты
-		}
+        notifyDate := contract.EndDate.AddDate(0, 0, -daysBefore)
+        if isSameDay(notifyDate, currentDate) {
+            notifications = append(notifications, models.PendingNotification{
+                Recipient:  recipient,
+                Contract:   &contract,
+                NotifyDate: notifyDate,
+            })
+        }
+    }
 
-		// Вычисляем дату, когда нужно отправить уведомление
-		notifyDate := contract.EndDate.AddDate(0, 0, -daysBefore)
-
-		// Если сегодня день отправки уведомления
-		if notifyDate.Year() == currentDate.Year() && 
-		   notifyDate.Month() == currentDate.Month() && 
-		   notifyDate.Day() == currentDate.Day() {
-			notifications = append(notifications, models.PendingNotification{
-				Recipient:  recipient,
-				Contract:   &contract,
-				NotifyDate: notifyDate,
-			})
-		}
-	}
-
-	return notifications, nil
+    return notifications, nil
 }
 
+// Вспомогательная функция для сравнения дат без времени
+func isSameDay(date1, date2 time.Time) bool {
+    y1, m1, d1 := date1.Date()
+    y2, m2, d2 := date2.Date()
+    return y1 == y2 && m1 == m2 && d1 == d2
+}
 func (r *NotificationRepository) getStageNotifications(currentDate time.Time) ([]models.PendingNotification, error) {
 	query := `
 		SELECT 

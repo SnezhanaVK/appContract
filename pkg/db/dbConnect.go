@@ -1,6 +1,9 @@
 package db
 
+// dbConnect.go в пакете db
 import "github.com/jackc/pgx"
+
+
 
 func ConnectDB() (*pgx.Conn, error) {
 	conn, err := pgx.Connect(pgx.ConnConfig{

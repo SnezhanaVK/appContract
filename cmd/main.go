@@ -13,7 +13,7 @@ func main() {
 
 	router := routers.NewRouter()
 	
-	// Оберните роутер в CORS middleware
+
 	handler := middleware.CORS(router)
 	
 	log.Println("Сервер запущен на порту :8080")
