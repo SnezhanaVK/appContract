@@ -5,15 +5,13 @@ import (
 	"appContract/pkg/models"
 	"encoding/json"
 	"errors"
-	"log"
 )
 
 func DBgetContractAll() ([]models.Contracts, error) {
-    conn, err := db.ConnectDB()
-    if err != nil {
-        return nil, err
+    conn:= db.GetDB()
+    if conn==nil{
+        return nil, errors.New("connection error")
     }
-    defer conn.Close()
 
     rows, err := conn.Query(`
         SELECT 
@@ -96,14 +94,12 @@ func DBgetContractAll() ([]models.Contracts, error) {
 }
 //Sort 
 func DBgetContractByType(idType int) ([]models.Contracts, error) {
-    // соединение с бд
-    conn, err := db.ConnectDB()
-    if err != nil {
-        return nil, err
+    
+    conn:=db.GetDB()
+    if conn==nil{
+        return nil, errors.New("connection error")
     }
-    defer conn.Close()
-
-    // запрос к бд
+   
     rows, err := conn.Query(`
         SELECT c.id_contract,
             c.name_contract,
@@ -174,14 +170,13 @@ func DBgetContractByType(idType int) ([]models.Contracts, error) {
     return contracts, nil
 }
 func DBgetContractsByDateCreate( date models.Date ) ([]models.Contracts, error) {
-    // соединение с бд
-    conn, err := db.ConnectDB()
-    if err != nil {
-        return nil, err
+    
+    conn:=db.GetDB()
+   
+    if conn==nil{
+        return nil, errors.New("connection error")
     }
-    defer conn.Close()
-
-    // запрос к бд
+  
     rows, err := conn.Query(`
         SELECT c.id_contract,
             c.name_contract,
@@ -253,15 +248,13 @@ func DBgetContractsByDateCreate( date models.Date ) ([]models.Contracts, error) 
     return contracts, nil
 }
 func DBgetContractsByTegs() ([]models.Contracts, error) {
-    //сделать вывод информации по внешним ключам
-	// соединение с бд
-	conn, err := db.ConnectDB()
-	if err != nil {
-		return nil, err
-	}
-	defer conn.Close()
+   
+	conn := db.GetDB()
 
-	// запрос к бд
+    if conn == nil {
+        return nil, errors.New("DB connection is nil")
+    }
+	
 	rows, err := conn.Query(`
 	   SELECT c.id_contract,
             c.name_contract,
@@ -333,14 +326,12 @@ func DBgetContractsByTegs() ([]models.Contracts, error) {
 }
 
 func DBgetContractsByStatus() ([]models.Contracts, error) {
-    // соединение с бд
-    conn, err := db.ConnectDB()
-    if err != nil {
-        return nil, err
+    
+    conn:= db.GetDB()
+    if conn==nil{
+        return nil, errors.New("connection error")
     }
-    defer conn.Close()
-
-    // запрос к бд
+    
     rows, err := conn.Query(`
         SELECT c.id_contract,
             c.name_contract,
@@ -411,14 +402,12 @@ func DBgetContractsByStatus() ([]models.Contracts, error) {
     return contracts, nil
 }
 
-// Затем модифицируйте запрос
-func DBgetContractID(contractID int) ([]models.Contracts, error) {
-    conn, err := db.ConnectDB()
-    if err != nil {
-        return nil, err
-    }
-    defer conn.Close()
 
+func DBgetContractID(contractID int) ([]models.Contracts, error) {
+    conn:= db.GetDB()
+    if conn==nil{
+        return nil, errors.New("connection error")
+    }
     rows, err := conn.Query(`
         SELECT 
             c.id_contract,
@@ -499,12 +488,11 @@ func DBgetContractID(contractID int) ([]models.Contracts, error) {
     return contracts, nil
 }
 func DBgetContractUserId(user_id int) ([]models.Contracts, error) {
-    conn, err := db.ConnectDB()
-    if err != nil {
-        log.Fatal(err)
-    }
-    defer conn.Close()
+    conn:= db.GetDB()
 
+    if conn==nil{
+        return nil, errors.New("connection error")
+    }
     rows, err := conn.Query(`SELECT 
             c.id_contract,
             c.name_contract,
@@ -588,13 +576,12 @@ func DBgetContractUserId(user_id int) ([]models.Contracts, error) {
 }
 
 func DBaddContract(contract models.Contracts)error{
-	conn ,err:=db.ConnectDB()
-	if err !=nil{
-		return err
-	}
-	defer conn.Close()
+	conn:= db.GetDB()
+	if conn==nil{
+        return errors.New("connection error")
+    }
 	var userExist bool
-    err = conn.QueryRow(`SELECT EXISTS(SELECT 1 FROM users WHERE id_user = $1)`, contract.Id_user).Scan(&userExist)
+    err := conn.QueryRow(`SELECT EXISTS(SELECT 1 FROM users WHERE id_user = $1)`, contract.Id_user).Scan(&userExist)
     if err != nil {
         return err
     }
@@ -643,13 +630,12 @@ func DBaddContract(contract models.Contracts)error{
 }
 
 func DBchangeContract(contract models.Contracts) error{
-	conn, err:= db.ConnectDB()
-	if err!=nil{
-		return err
-	}
-		defer conn.Close()
-	
-	_, err=conn.Exec(`
+	conn:= db.GetDB()
+	if conn==nil{
+        return errors.New("connection error")
+    }
+
+	_, err:=conn.Exec(`
 	UPDATE  contracts SET
 		name_contract = $1,
 		date_create_contract = $2,
@@ -691,15 +677,13 @@ func DBchangeContract(contract models.Contracts) error{
 }
 
 func DBchangeContractUser(id_contract int, id_user int) error {
-    conn, err := db.ConnectDB()
-    if err != nil {
-        return err
+    conn:= db.GetDB()
+    if conn==nil{
+        return errors.New("connection error")
     }
-    defer conn.Close()
-
-    // Проверяем, существует ли id_user в таблице users
+    
     var exists bool
-    err = conn.QueryRow(`SELECT EXISTS(SELECT 1 FROM users WHERE id_user = $1)`, id_user).Scan(&exists)
+    err := conn.QueryRow(`SELECT EXISTS(SELECT 1 FROM users WHERE id_user = $1)`, id_user).Scan(&exists)
     if err != nil {
         return err
     }
@@ -707,7 +691,7 @@ func DBchangeContractUser(id_contract int, id_user int) error {
         return errors.New("id_user не существует в таблице users")
     }
 
-    // Проверяем, существует ли id_contract в таблице contracts
+   
     exists = false
     err = conn.QueryRow(`SELECT EXISTS(SELECT 1 FROM contracts WHERE id_contract = $1)`, id_contract).Scan(&exists)
     if err != nil {
@@ -717,7 +701,7 @@ func DBchangeContractUser(id_contract int, id_user int) error {
         return errors.New("id_contract не существует в таблице contracts")
     }
 
-    // Обновляем таблицу contracts
+
     result, err := conn.Exec(`
         UPDATE contracts
         SET id_user = $2
@@ -737,14 +721,12 @@ func DBchangeContractUser(id_contract int, id_user int) error {
 }
 
 func DBdeleteContract(contract_id int)error{
-	conn, err:=db.ConnectDB()
-	if err!=nil{
-		return err
-
-	}
-	defer conn.Close()
-
-	_,err=conn.Exec(
+	conn:=db.GetDB()
+    if conn==nil{
+        return errors.New("connection error")
+    }
+	
+	_,err:=conn.Exec(
 		`
 		DELETE FROM contracts WHERE id_contract=$1`, contract_id)
 		if err!=nil{

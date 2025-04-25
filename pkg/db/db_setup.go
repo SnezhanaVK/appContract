@@ -1,63 +1,80 @@
 package db
 
 import (
-	"database/sql"
+	"context"
 	"fmt"
 	"log"
 
-	_ "github.com/jackc/pgx"
-	_ "github.com/lib/pq"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
-func SetupDatabase() {
-	constStr := "host=localhost user=postgres password=1234 dbname=postgres port=5432 sslmode=disable"
-
-	db, err := sql.Open("postgres", constStr)
+var (
+	dbPool *pgxpool.Pool
+)
+func SetupDatabase() error {
+	connConfig,err := pgx.ParseConfig("host=localhost user=postgres password=1234 dbname=postgres port=5432 sslmode=disable")
 
 	if err != nil {
-		log.Fatal("Error opening database: ", err)
+		return fmt.Errorf("Error parsing database connection string: %v", err)
 	}
-	defer db.Close()
-// Проверяем, существует ли база данных
-	var exists bool
-	err = db.QueryRow(`SELECT EXISTS(SELECT 1 FROM pg_database WHERE datname = 'contract_db')`).Scan(&exists)
+	conn, err := pgx.ConnectConfig(context.Background(), connConfig)
 	if err != nil {
-		log.Fatal("Error checking database existence: ", err)
+		return fmt.Errorf("Error connecting to database: %v", err)
+	}
+	defer conn.Close(context.Background())
+
+
+
+	var exists bool
+
+	err = conn.QueryRow(context.Background(), `SELECT EXISTS(SELECT 1 FROM pg_database WHERE datname = 'contract_db')`).Scan(&exists)
+	if err != nil {
+		return fmt.Errorf("Error checking database existence: %v", err)
 	}
 	if !exists {
-	_, err = db.Exec(`CREATE DATABASE contract_db`)
+		_, err = conn.Exec(context.Background(), `CREATE DATABASE contract_db`)
+		if err != nil {
+			return fmt.Errorf("Error creating database: %v", err)
+		}
+		fmt.Println("Database created successfully")
+		connConfig.Database= "contract_db"
+	conn, err = pgx.ConnectConfig(context.Background(), connConfig)
 	if err != nil {
-		log.Fatal("Error creating database: ", err)
+		return fmt.Errorf("Error connecting to database: %v", err)
 	}
-	fmt.Println("Database created successfully")
-	connStr := "host=localhost user=postgres password=1234 dbname=contract_db port=5432 sslmode=disable"
 	
-	db, err = sql.Open("postgres", connStr)
+	defer conn.Close(context.Background())
+	tx, err := conn.Begin(context.Background())
 	if err != nil {
-		log.Fatal("Error opening database: ", err)
+		return fmt.Errorf("Error starting transaction: %v", err)
 	}
-
-	defer db.Close()
-	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS roles (
+	defer tx.Rollback(context.Background())
+	
+	
+	
+	
+		_, err = tx.Exec(context.Background(),
+	   `CREATE TABLE IF NOT EXISTS roles (
 		id_role SERIAL PRIMARY KEY,
 		name_role VARCHAR(255) NOT NULL
 		)`)
 	if err != nil {
-		log.Fatal("Error roles creating table : ", err)
+	return fmt.Errorf("Error roles creating table: %v", err)
 	}
 	fmt.Println("Table roles created successfully")
 	
 
-	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS notification_settings (
+	_, err = tx.Exec(context.Background(),`CREATE TABLE IF NOT EXISTS notification_settings (
 		id_notification_settings SERIAL PRIMARY KEY,
 		variant_notification_settings VARCHAR(30) NOT NULL
 
 	)`)
 	if err != nil {
-		log.Fatal("Error notifications creating table : ", err)
+		return fmt.Errorf("Error notification_settings creating table: %v", err)
 	}
 	fmt.Println("Table notifications created successfully")
 
-	_, err = db.Exec(`CREATE TABLE if not exists users (
+	_, err = tx.Exec(context.Background(),`CREATE TABLE if not exists users (
 		id_user SERIAL PRIMARY KEY,
 		surname VARCHAR(255) NOT NULL,
 		username VARCHAR(255) NOT NULL,
@@ -78,7 +95,7 @@ func SetupDatabase() {
 	}
 	fmt.Println("Table users created successfully")
 
-	_, err = db.Exec(`CREATE TABLE if not exists types_contracts (
+	_, err = tx.Exec(context.Background(),`CREATE TABLE if not exists types_contracts (
 		id_type_contract SERIAL PRIMARY KEY,
 		name_type_contract VARCHAR(255) NOT NULL
 
@@ -88,7 +105,7 @@ func SetupDatabase() {
 	}
 	fmt.Println("Table types_contracts created successfully")
 
-	_, err = db.Exec(`CREATE TABLE if not exists status_contracts (
+	_, err = tx.Exec(context.Background(),`CREATE TABLE if not exists status_contracts (
 		id_status_contract SERIAL PRIMARY KEY,
 		name_status_contract VARCHAR(255) NOT NULL
 		
@@ -98,7 +115,7 @@ func SetupDatabase() {
 	}
 	fmt.Println("Table status_contracts created successfully")
 
-	_, err = db.Exec(`CREATE TABLE if not exists counterparty (
+	_, err = tx.Exec(context.Background(),`CREATE TABLE if not exists counterparty (
 		id_counterparty SERIAL PRIMARY KEY,
 		name_counterparty VARCHAR(255) NOT NULL,
 		contact VARCHAR(255) NOT NULL,
@@ -112,7 +129,7 @@ func SetupDatabase() {
 	}
 	fmt.Println("Table counterparty created successfully")
 
-	_, err = db.Exec(`CREATE TABLE if not exists tegs (
+	_, err = tx.Exec(context.Background(),`CREATE TABLE if not exists tegs (
 		id_teg SERIAL PRIMARY KEY,
 		name_teg VARCHAR(255) NOT NULL
 		
@@ -122,7 +139,7 @@ func SetupDatabase() {
 	}
 	fmt.Println("Table tegs created successfully")
 
-	_, err = db.Exec(`CREATE TABLE if not exists status_stages (
+	_, err = tx.Exec(context.Background(),`CREATE TABLE if not exists status_stages (
 		id_status_stage SERIAL PRIMARY KEY,
 		name_status_stage VARCHAR(255) NOT NULL
 		
@@ -132,7 +149,7 @@ func SetupDatabase() {
 	}
 	fmt.Println("Table status_stages created successfully")
 
-	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS contracts (
+	_, err = tx.Exec(context.Background(),`CREATE TABLE IF NOT EXISTS contracts (
 		id_contract SERIAL PRIMARY KEY,
 		name_contract VARCHAR(255) NOT NULL,
 		date_create_contract date NOT NULL,
@@ -156,8 +173,8 @@ func SetupDatabase() {
 		log.Fatal("Error contracts creating table : ", err)
 	}
 	fmt.Println("Table contracts created successfully")
-	_,err:=db.Exec(`
-CREATE TABLE contract_notifications (
+	_,err=tx.Exec(context.Background(),`
+CREATE TABLE if not exists contract_notifications (
     id_contract_notification SERIAL PRIMARY KEY,
     id_contract int NOT NULL,
     id_user int NOT NULL,
@@ -177,7 +194,7 @@ fmt.Println("Table contract_notifications created successfully")
 
 
 
-_, err = db.Exec(`CREATE TABLE if not exists stages (
+_, err = tx.Exec(context.Background(),`CREATE TABLE if not exists stages (
     id_stage SERIAL PRIMARY KEY,
     name_stage VARCHAR(255) NOT NULL,
     id_user int NOT NULL,
@@ -193,7 +210,7 @@ if err != nil {
 }
 fmt.Println("Table stages created successfully")
 
-_,err=db.Exec(`CREATE TABLE stage_notifications (
+_,err=tx.Exec(context.Background(),`CREATE TABLE if not exists stage_notifications (
     id_stage_notification SERIAL PRIMARY KEY,
     id_stage int NOT NULL,
     id_user int NOT NULL,
@@ -208,7 +225,7 @@ if err != nil {
 }
 fmt.Println("Table stage_notifications created successfully")
 
-_, err = db.Exec(`CREATE TABLE if not exists history_status (
+_, err = tx.Exec(context.Background(),`CREATE TABLE if not exists history_status (
     id_history_status SERIAL PRIMARY KEY,
     id_stage int NOT NULL,
     id_status_stage int NOT NULL,
@@ -221,7 +238,7 @@ if err != nil {
 }
 fmt.Println("Table history_states created successfully")
 
-_, err = db.Exec(`CREATE TABLE IF NOT EXISTS comments (
+_, err = tx.Exec(context.Background(),`CREATE TABLE IF NOT EXISTS comments (
     id_comment SERIAL PRIMARY KEY,
     id_history_status int NOT NULL,
     comment VARCHAR(1000) NOT NULL,
@@ -234,7 +251,7 @@ if err != nil {
 fmt.Println("Table comments created successfully")
 
 
-	_, err = db.Exec(`CREATE TABLE if not exists files (
+	_, err = tx.Exec(context.Background(),`CREATE TABLE if not exists files (
     id_file SERIAL PRIMARY KEY,
     name_file VARCHAR(255) NOT NULL,
     data bytea NOT NULL,
@@ -248,7 +265,7 @@ fmt.Println("Table comments created successfully")
 	}
 	fmt.Println("Table files created successfully")
 
-	_, err = db.Exec(`CREATE TABLE if not exists contracts_by_tegs (
+	_, err = tx.Exec(context.Background(),`CREATE TABLE if not exists contracts_by_tegs (
 		id_contract_by_teg SERIAL PRIMARY KEY,
 		id_contract int NOT NULL,
 		id_teg int NOT NULL,
@@ -259,6 +276,32 @@ fmt.Println("Table comments created successfully")
 		log.Fatal("Error contracts_by_tegs creating table : ", err)
 	}
 	fmt.Println("Table contracts_by_tegs created successfully")
+	if err := tx.Commit(context.Background()); err != nil {
+		return fmt.Errorf("error committing transaction: %v", err)
+	}
+		
+	}
+
+	// Инициализируем пул соединений
+	poolConfig, err := pgxpool.ParseConfig("host=localhost user=postgres password=1234 dbname=contract_db port=5432 sslmode=disable")
+	if err != nil {
+		return fmt.Errorf("error parsing pool config: %v", err)
+	}
+
+	dbPool, err = pgxpool.NewWithConfig(context.Background(), poolConfig)
+	if err != nil {
+		return fmt.Errorf("error creating connection pool: %v", err)
+	}
+
+	return nil
 }
 
+func GetDBConection() *pgxpool.Pool {
+	return dbPool
+}
+
+func CloseDB() {
+	if dbPool != nil {
+		dbPool.Close()
+	}
 }

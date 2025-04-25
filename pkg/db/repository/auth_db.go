@@ -6,25 +6,23 @@ import (
 	"database/sql"
 	"errors"
 	"log"
+
+	"github.com/jackc/pgx"
 )
 
 func Authorize(login string, password string) (int, error) {
-    conn, err := db.ConnectDB()
-    if err != nil {
-        return 0, err
+    
+    conn:=db.GetDB()
+    if conn==nil{
+        return 0, errors.New("connection error")
     }
-    defer func() {
-        if err := conn.Close(); err != nil {
-            log.Println(err)
-        }
-    }()
 
     var user models.Users
-    err = conn.QueryRow(`SELECT id_user ,login, password FROM users WHERE login=$1 AND password=$2`, 
+    err := conn.QueryRow(`SELECT id_user ,login, password FROM users WHERE login=$1 AND password=$2`, 
                         login, password).Scan(&user.Id_user, &user.Login, &user.Password)
 
     if err != nil {
-        if err == sql.ErrNoRows {
+        if err == pgx.ErrNoRows {
             return 0, errors.New("user not found")
         }
         return 0, err
@@ -34,14 +32,13 @@ func Authorize(login string, password string) (int, error) {
 }
 
 func GetAddmin(id int) (bool, error) {
-    conn, err := db.ConnectDB()
-    if err != nil {
-        log.Fatal(err)
+    conn:= db.GetDB()
+    if conn==nil{
+        return false, errors.New("connection error")
     }
-    defer conn.Close()
 
     var isAdmin sql.NullBool
-    err = conn.QueryRow(`SELECT admin FROM users WHERE id_user=$1`, id).Scan(&isAdmin)
+    err := conn.QueryRow(`SELECT admin FROM users WHERE id_user=$1`, id).Scan(&isAdmin)
     if err != nil {
         if err == sql.ErrNoRows {
             return false, errors.New("user not found")
@@ -61,12 +58,13 @@ func ChangePassword(login string, password string)error{
 	if password==""{
 		return errors.New("password is required")
 	}
-	conn,err:=db.ConnectDB()
-	if err!=nil{
-		return err
-	}
-	defer conn.Close()
-	_,err=conn.Exec(`UPDATE users SET password=$1 WHERE login=$2`,password,login)
+	conn:=db.GetDB()
+    if conn==nil{
+        return errors.New("connection error")
+    }
+
+
+	_,err:=conn.Exec(`UPDATE users SET password=$1 WHERE login=$2`,password,login)
 	if err!=nil{
 		return err
 	}
@@ -74,16 +72,15 @@ func ChangePassword(login string, password string)error{
 }
 
 func GetUser(login string) (models.Users, error) {
-    conn, err := db.ConnectDB()
-    if err != nil {
-        log.Println(err)
-        return models.Users{}, err
+    conn:= db.GetDB() 
+    if conn==nil{
+        return models.Users{}, errors.New("connection error")
     }
-    defer conn.Close()
 
     var user models.Users
 
-    err = conn.QueryRow(`SELECT id_user, email, login, password FROM users WHERE login = $1`, login).Scan(
+
+    err:= conn.QueryRow(`SELECT id_user, email, login, password FROM users WHERE login = $1`, login).Scan(
         &user.Id_user,
         &user.Email,
         &user.Login,
@@ -92,7 +89,7 @@ func GetUser(login string) (models.Users, error) {
 
     if err != nil {
         log.Println(err)
-        if err == sql.ErrNoRows {
+        if err == pgx.ErrNoRows {
             return models.Users{}, errors.New("Пользователь не найден")
         }
         return models.Users{}, err

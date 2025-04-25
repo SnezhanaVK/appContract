@@ -3,18 +3,17 @@ package db
 import (
 	"appContract/pkg/db"
 	"appContract/pkg/models"
+	"errors"
 	"log"
 )
 
 func DBgetUserAll() ([]models.Users, error) {
-	// соединение с бд
-	conn, err := db.ConnectDB()
-	if err != nil {
-		log.Fatal(err)
+	
+	conn:= db.GetDB()
+	if conn==nil{
+		return nil, errors.New("connection error")
 	}
-	defer conn.Close()
 
-	// запрос к бд
 	rows, err := conn.Query(`SELECT 
 							id_user, 
 							surname, 
@@ -51,11 +50,10 @@ func DBgetUserAll() ([]models.Users, error) {
 }
 
 func DBgetUserID(user_id int) ([]models.Users, error) {
-    conn, err := db.ConnectDB()
-    if err != nil {
-        return nil, err
-    }
-    defer conn.Close()
+    conn:= db.GetDB()
+	if conn==nil{
+		return nil, errors.New("connection error")
+	}
 
     rows, err := conn.Query(`SELECT 
   u.id_user, 
@@ -98,13 +96,12 @@ WHERE id_user=$1`, user_id)
 }
 
 func DBaddUser(user models.Users) error{
-	conn, err:= db.ConnectDB()
-	if err!=nil{
-		log.Fatal(err)
+	conn:= db.GetDB()
+	if conn==nil{
+		return errors.New("connection error")
 	}
-	defer conn.Close()
 
-	_,err =conn.Exec(`
+	_,err :=conn.Exec(`
 	INSERT INTO users (
 	surname, 
 	username, 
@@ -140,13 +137,12 @@ return nil
 }
 
 func DBchangeUser(user models.Users) error{
-	conn, err:= db.ConnectDB()
-	if err!=nil{
-		log.Fatal(err)
+	conn:= db.GetDB()
+	if conn==nil{
+		return errors.New("connection error")
 	}
-	defer conn.Close()
 
-	_,err =conn.Exec(`
+	_,err :=conn.Exec(`
 	UPDATE users SET 
 	surname=$1,
 	username=$2,
@@ -181,13 +177,13 @@ return nil
 }
 
 func DBdeleteUser(user_id int) error{
-	conn, err:= db.ConnectDB()
-	if err!=nil{
-		log.Fatal(err)
-	}
-	defer conn.Close()
+	conn:= db.GetDB()
 
-	_,err =conn.Exec(`
+	if conn==nil{
+		return errors.New("connection error")
+	}
+
+	_,err :=conn.Exec(`
 	DELETE FROM users WHERE id_user=$1`, user_id)
 if err!=nil{
 	log.Fatal(err)	

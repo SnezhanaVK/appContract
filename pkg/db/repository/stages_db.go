@@ -3,17 +3,15 @@ package db
 import (
 	"appContract/pkg/db"
 	"appContract/pkg/models"
+	"errors"
 	"log"
 )
 
 func DBgetStageAll() ([]models.Stages, error) {
-	conn, err := db.ConnectDB()
-	if err != nil {
-		log.Fatal(err)
+	conn:= db.GetDB()
+	if conn == nil {
+		return nil, errors.New("DB connection is nil")
 	}
-	defer conn.Close()
-
-	
     rows, err := conn.Query(`SELECT 
     s.id_stage,
     s.name_stage,
@@ -70,11 +68,10 @@ JOIN status_stages ss ON hs.id_status_stage = ss.id_status_stage`)
 }
 
 func DBgetStageUserID(user_id int) ([]models.Stages, error) {
-	conn, err := db.ConnectDB()
-	if err != nil {
-		log.Fatal(err)
+	conn := db.GetDB()
+	if conn == nil {
+		return nil, errors.New("DB connection is nil")
 	}
-	defer conn.Close()
 
 	rows, err := conn.Query(`SELECT 
     s.id_stage,
@@ -121,11 +118,10 @@ WHERE s.id_user=$1`, user_id)
 }
 
 func DBgetStageID(stage_id int) (models.Stages, error) {
-	conn, err := db.ConnectDB()
-	if err != nil {
-		log.Fatal(err)
+	conn:= db.GetDB()
+	if conn == nil {
+		return models.Stages{}, errors.New("DB connection is nil")
 	}
-	defer conn.Close()
 
 	rows, err := conn.Query(`SELECT 
     s.id_stage,
@@ -185,11 +181,10 @@ WHERE s.id_stage=$1`, stage_id)
 	return stage, nil
 }
 func DBgetFileIDStageID(id_stages int, id_file int) (models.File, error) {
-	conn, err := db.ConnectDB()
-	if err != nil {
-		log.Fatal(err)
+	conn:= db.GetDB()	
+	if conn == nil {
+		return models.File{}, errors.New("DB connection is nil")
 	}
-	defer conn.Close()
 
 	rows, err := conn.Query("SELECT * FROM files WHERE Id_stage=$1 AND Id_file=$2", id_stages, id_file)
 	if err != nil {
@@ -216,11 +211,10 @@ func DBgetFileIDStageID(id_stages int, id_file int) (models.File, error) {
 }
 
 func DBgetFilesStageID(id_stages int) ([]models.File, error) {
-	conn, err := db.ConnectDB()
-	if err != nil {
-		log.Fatal(err)
+	conn := db.GetDB()
+	if conn == nil {
+		return nil, errors.New("DB connection is nil")
 	}
-	defer conn.Close()
 
 	rows, err := conn.Query("SELECT * FROM files WHERE Id_stage=$1", id_stages)
 	if err != nil {
@@ -248,11 +242,11 @@ func DBgetFilesStageID(id_stages int) ([]models.File, error) {
 }
 
 func DBgetStageIdStatus(id_stage int) (models.StatusStage, error) {
-	conn, err := db.ConnectDB()
-	if err != nil {
-		log.Fatal(err)
+	conn:= db.GetDB()
+	if conn == nil {
+		return models.StatusStage{}, errors.New("DB connection is nil")
 	}
-	defer conn.Close()
+	
 
 	rows, err := conn.Query(`SELECT * 
                             FROM status_stages
@@ -274,13 +268,13 @@ func DBgetStageIdStatus(id_stage int) (models.StatusStage, error) {
 }
 
 func DBaddFile(file models.File) error {
-	conn, err := db.ConnectDB()
-	if err != nil {
-		return err
+	conn:= db.GetDB()
+	if conn == nil {
+		return errors.New("DB connection is nil")
 	}
-	defer conn.Close()
+	
 
-	_, err = conn.Exec(`INSERT INTO files (
+	_, err := conn.Exec(`INSERT INTO files (
         name_file,
         data,
         type_file,
@@ -297,13 +291,12 @@ func DBaddFile(file models.File) error {
 	return nil
 }
 func DBaddStage(stage models.Stages) error {
-	conn, err := db.ConnectDB()
-	if err != nil {
-		log.Fatal(err)
+	conn:= db.GetDB()
+	if conn == nil {
+		return errors.New("DB connection is nil")
 	}
-	defer conn.Close()
 
-	_, err = conn.Exec(`INSERT INTO stages(
+	_, err := conn.Exec(`INSERT INTO stages(
     name_stage,
     id_user,
     description,
@@ -326,14 +319,13 @@ func DBaddStage(stage models.Stages) error {
 }
 
 func DBaddComment(idStage int, idStatusStage int, comment string) error {
-    conn, err := db.ConnectDB()
-    if err != nil {
-        log.Fatal(err)
-    }
-    defer conn.Close()
+	conn:= db.GetDB()
+	if conn == nil {
+		return errors.New("DB connection is nil")
+	}
 
     var idHistoryState int
-    err = conn.QueryRow(`SELECT id_history_status FROM history_status
+    err := conn.QueryRow(`SELECT id_history_status FROM history_status
         WHERE id_stage = $1 AND id_status_stage = $2`,
         idStage,
         idStatusStage).Scan(&idHistoryState)
@@ -354,12 +346,11 @@ func DBaddComment(idStage int, idStatusStage int, comment string) error {
 }
 
 func DBgetComment(id_stage int) ([]models.Stages, error) {
-    conn, err := db.ConnectDB()
-    if err != nil {
-        log.Fatal(err)
-    }
-    defer conn.Close()
-
+	conn:= db.GetDB()
+	if conn == nil {
+		return nil, errors.New("DB connection is nil")
+	}
+   
     rows, err := conn.Query(`
         SELECT c.*
         FROM comments c
@@ -387,11 +378,11 @@ func DBgetComment(id_stage int) ([]models.Stages, error) {
     return comments, nil
 }
 func DBChengeStatusStage(id_stage int, id_status_stage int, comment string) error {
-    conn, err := db.ConnectDB()
-    if err != nil {
-        log.Fatal(err)
-    }
-    defer conn.Close()
+	conn:= db.GetDB()
+	if conn == nil {
+		return errors.New("DB connection is nil")
+	}
+   
     tx, err := conn.Begin()
     if err != nil {
         return err
@@ -421,13 +412,10 @@ func DBChengeStatusStage(id_stage int, id_status_stage int, comment string) erro
     return tx.Commit()
 }
 func DBdeleteFile(id_files int) error {
-	conn, err := db.ConnectDB()
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer conn.Close()
+	conn := db.GetDB()
+	
 
-	_, err = conn.Exec(`DELETE FROM files WHERE id_file=$1`, id_files)
+	_, err := conn.Exec(`DELETE FROM files WHERE id_file=$1`, id_files)
 
 	if err != nil {
 		log.Fatal(err)
@@ -436,11 +424,10 @@ func DBdeleteFile(id_files int) error {
 }
 
 func DBdeleteStage(id_stage int) error {
-    conn, err := db.ConnectDB()
-    if err != nil {
-        return err
-    }
-    defer conn.Close()
+    conn:= db.GetDB()
+	if conn == nil {
+		return errors.New("DB connection is nil")
+	}
 
     tx, err := conn.Begin()
     if err != nil {
@@ -474,13 +461,13 @@ func DBdeleteStage(id_stage int) error {
 }
 
 func DBdeleteComment(id_comment int) error {
-	conn, err := db.ConnectDB()
-	if err != nil {
-		log.Fatal(err)
+	conn:= db.GetDB()
+	if conn == nil {
+		return errors.New("DB connection is nil")
 	}
-	defer conn.Close()
+	
 
-	_, err = conn.Exec(`DELETE FROM comments WHERE id_comment=$1`, id_comment)
+	_, err := conn.Exec(`DELETE FROM comments WHERE id_comment=$1`, id_comment)
 
 	if err != nil {
 		log.Fatal(err)
