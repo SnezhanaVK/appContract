@@ -39,7 +39,7 @@ func (s *NotificationService) ProcessDailyNotifications() error {
 		log.Printf("Notification sent to %s", n.Recipient.Email)
 	}
 
-	return nil
+    return nil
 }
 
 func (s *NotificationService) prepareEmailContent(n models.PendingNotification) utils.EmailContent {
