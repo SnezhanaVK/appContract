@@ -4,9 +4,11 @@ package handlers
 import (
 	"appContract/pkg/models"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 
 	db "appContract/pkg/db/repository"
 
@@ -66,209 +68,289 @@ func GetAllContracts(w http.ResponseWriter, r *http.Request) {
     w.Write(data)
 }
 func GetAllContractsByType(w http.ResponseWriter, r *http.Request) {
-    if r.Method!=http.MethodGet{
-        http.Error(w,"Invalid request method GetAllContracts",http.StatusBadRequest)
+    if r.Method != http.MethodGet {
+        http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
         return
     }
+
     vars := mux.Vars(r)
     idType := vars["idType"]
     if idType == "" {
-        http.Error(w, "idType обязательный параметр", http.StatusBadRequest)
+        http.Error(w, "idType is required", http.StatusBadRequest)
         return
     }
+
     idTypeInt, err := strconv.Atoi(idType)
     if err != nil {
-        http.Error(w, "Недопустимый idType", http.StatusBadRequest)
+        http.Error(w, "Invalid idType", http.StatusBadRequest)
         return
     }
-   
-  
+
     contracts, err := db.DBgetContractByType(idTypeInt)
     if err != nil {
         http.Error(w, err.Error(), http.StatusInternalServerError)
         return
     }
+
     var contractsResponse []map[string]interface{}
     for _, contract := range contracts {
+        // Создаем массив для тегов
+        var tags []map[string]interface{}
+        for _, tag := range contract.Tegs {
+            tags = append(tags, map[string]interface{}{
+                "id":   tag.Id_tegs,
+                "name": tag.Name_tegs,
+            })
+        }
+
         contractResponse := map[string]interface{}{
-            "contract_id": contract.Id_contract,
-            "name_contract": contract.Name_contract,
-            "date_create_contract": contract.Date_contract_create,
-            "user_id": contract.Id_user,
-            "date_conclusion": contract.Date_conclusion,
-            "date_start": contract.Date_contract_create,
-            "date_end": contract.Date_end,
-            "id_type": contract.Id_type,
-            "name_type_contract": contract.Name_type,
-            "id_counterparty": contract.Id_counterparty,
-            "name_counterparty": contract.Name_counterparty,
-            "id_status_contract": contract.Id_status_contract,
-            "name_status_contract": contract.Name_status_contract,
-            "id_teg": contract.Id_teg_contract,
-            "name_teg": contract.Tegs_contract,
+            "id_contract":          contract.Id_contract,
+            "name_contract":        contract.Name_contract,
+            "date_contract_create": contract.Date_contract_create,
+            "date_conclusion":      contract.Date_conclusion,
+            "date_end":            contract.Date_end,
+            "user": map[string]interface{}{
+                "id":         contract.Id_user,
+                "surname":    contract.Surname,
+                "name":       contract.Username,
+                "patronymic": contract.Patronymic,
+            },
+            "type": map[string]interface{}{
+                "id":   contract.Id_type,
+                "name": contract.Name_type,
+            },
+            "counterparty": map[string]interface{}{
+                "id":   contract.Id_counterparty,
+                "name": contract.Name_counterparty,
+            },
+            "status": map[string]interface{}{
+                "id":   contract.Id_status_contract,
+                "name": contract.Name_status_contract,
+            },
+            "tags": tags,
         }
         contractsResponse = append(contractsResponse, contractResponse)
     }
-    data, err:=json.Marshal(contractsResponse)
+
+    data, err := json.Marshal(contractsResponse)
     if err != nil {
         http.Error(w, err.Error(), http.StatusInternalServerError)
         return
     }
+
+    w.Header().Set("Content-Type", "application/json")
     w.WriteHeader(http.StatusOK)
     w.Write(data)
 }
 
 func PostAllContractsByDateCreate(w http.ResponseWriter, r *http.Request) {
-    if r.Method!=http.MethodPost{
-        http.Error(w,"Invalid request method PostAllContractsByDateCreate",http.StatusBadRequest)
+    if r.Method != http.MethodPost {
+        http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
         return
     }
-   
-    var date models.Date
-    err:=json.NewDecoder(r.Body).Decode(&date.Date_start)//, &date.Date_end
-    if err!=nil{
-        http.Error(w,"Invalid request body PostAllContractsByDateCreate",http.StatusBadRequest)
+
+    // Получаем даты из тела запроса
+    var dateRange struct {
+        Date_start time.Time `json:"date_start"`
+        Date_end   time.Time `json:"date_end"`
+    }
+    
+    err := json.NewDecoder(r.Body).Decode(&dateRange)
+    if err != nil {
+        http.Error(w, "Invalid request body", http.StatusBadRequest)
         return
     }
+
+    // Создаем структуру Date для запроса к БД
+    date := models.Date{
+        Date_start: dateRange.Date_start,
+        Date_end:   dateRange.Date_end,
+    }
+
     contracts, err := db.DBgetContractsByDateCreate(date)
     if err != nil {
         http.Error(w, err.Error(), http.StatusInternalServerError)
         return
     }
-    var contractsResponse []map[string]interface{}
-    for _, contract := range contracts {
-        contractResponse := map[string]interface{}{
-            "contract_id": contract.Id_contract,
-            "name_contract": contract.Name_contract,
-            "date_create_contract": contract.Date_contract_create,
-            "user_id": contract.Id_user,
-            "date_conclusion": contract.Date_conclusion,
-            "date_start": contract.Date_contract_create,
-            "date_end": contract.Date_end,
-            "id_type": contract.Id_type,
-            "name_type_contract": contract.Name_type,
-            "id_counterparty": contract.Id_counterparty,
-            "name_counterparty": contract.Name_counterparty,
-            "id_status_contract": contract.Id_status_contract,
-            "name_status_contract": contract.Name_status_contract,
-            "id_teg": contract.Id_teg_contract,
-            "name_teg": contract.Tegs_contract,
-        }
-        contractsResponse = append(contractsResponse, contractResponse)
-    }
-    data, err:=json.Marshal(contractsResponse)
-    if err != nil {
-        http.Error(w, err.Error(), http.StatusInternalServerError)
-        return
-    }
-    w.WriteHeader(http.StatusOK)
-    w.Write(data)
-}
 
-func GetAllContractsByTegs(w http.ResponseWriter, r *http.Request) {
-    if r.Method!=http.MethodGet{
-        http.Error(w,"Invalid request method GetAllContractsByTegs",http.StatusBadRequest)
-        return
-    }
-    vars := mux.Vars(r)
-    idTeg := vars["id_teg_contract"]
-    if idTeg == "" {
-        http.Error(w, "id_teg_contract обязательный параметр", http.StatusBadRequest)
-        return
-    }
-    idTegInt, err := strconv.Atoi(idTeg)
-    if err != nil {
-        http.Error(w, "Недопустимый id_teg_contract", http.StatusBadRequest)
-        return
-    }
-   
-  
-    contracts, err := db.DBgetContractByType(idTegInt)
-    if err != nil {
-        http.Error(w, err.Error(), http.StatusInternalServerError)
-        return
-    }
     var contractsResponse []map[string]interface{}
     for _, contract := range contracts {
+        // Подготавливаем массив тегов
+        var tags []map[string]interface{}
+        for _, tag := range contract.Tegs {
+            tags = append(tags, map[string]interface{}{
+                "id_tegs":   tag.Id_tegs,
+                "name_tegs": tag.Name_tegs,
+            })
+        }
+
         contractResponse := map[string]interface{}{
-            "contract_id": contract.Id_contract,
-            "name_contract": contract.Name_contract,
+            "contract_id":          contract.Id_contract,
+            "name_contract":        contract.Name_contract,
             "date_create_contract": contract.Date_contract_create,
-            "user_id": contract.Id_user,
-            "date_conclusion": contract.Date_conclusion,
-            "date_start": contract.Date_contract_create,
-            "date_end": contract.Date_end,
-            "id_type": contract.Id_type,
-            "name_type_contract": contract.Name_type,
-            "id_counterparty": contract.Id_counterparty,
-            "name_counterparty": contract.Name_counterparty,
-            "id_status_contract": contract.Id_status_contract,
-            "name_status_contract": contract.Name_status_contract,
-            "id_teg": contract.Id_teg_contract,
-            "name_teg": contract.Tegs_contract,
+            "user": map[string]interface{}{
+                "id":         contract.Id_user,
+                "surname":    contract.Surname,
+                "name":       contract.Username,
+                "patronymic": contract.Patronymic,
+            },
+            "date_conclusion":     contract.Date_conclusion,
+            "date_end":           contract.Date_end,
+            "type": map[string]interface{}{
+                "id":   contract.Id_type,
+                "name": contract.Name_type,
+            },
+            "counterparty": map[string]interface{}{
+                "id":   contract.Id_counterparty,
+                "name": contract.Name_counterparty,
+            },
+            "status": map[string]interface{}{
+                "id":   contract.Id_status_contract,
+                "name": contract.Name_status_contract,
+            },
+            "tags": tags,
         }
         contractsResponse = append(contractsResponse, contractResponse)
     }
-    data, err:=json.Marshal(contractsResponse)
+
+    w.Header().Set("Content-Type", "application/json")
+    if err := json.NewEncoder(w).Encode(contractsResponse); err != nil {
+        http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+        return
+    }
+}
+func GetAllContractsByTegs(w http.ResponseWriter, r *http.Request) {
+    if r.Method != http.MethodGet {
+        http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+        return
+    }
+
+    // Получаем контракты с тегами из БД
+    contracts, err := db.DBgetContractsByTegs()
     if err != nil {
         http.Error(w, err.Error(), http.StatusInternalServerError)
         return
     }
-    w.WriteHeader(http.StatusOK)
-    w.Write(data)
+
+    var contractsResponse []map[string]interface{}
+    for _, contract := range contracts {
+        // Подготавливаем массив тегов
+        var tags []map[string]interface{}
+        for _, tag := range contract.Tegs {
+            tags = append(tags, map[string]interface{}{
+                "id_teg":   tag.Id_tegs,
+                "name_teg": tag.Name_tegs,
+            })
+        }
+
+        contractResponse := map[string]interface{}{
+            "contract_id":          contract.Id_contract,
+            "name_contract":       contract.Name_contract,
+            "date_create_contract": contract.Date_contract_create,
+            "user": map[string]interface{}{
+                "id":         contract.Id_user,
+                "surname":    contract.Surname,
+                "name":       contract.Username,
+                "patronymic": contract.Patronymic,
+            },
+            "date_conclusion":     contract.Date_conclusion,
+            "date_end":           contract.Date_end,
+            "type": map[string]interface{}{
+                "id":   contract.Id_type,
+                "name": contract.Name_type,
+            },
+            "counterparty": map[string]interface{}{
+                "id":   contract.Id_counterparty,
+                "name": contract.Name_counterparty,
+            },
+            "status": map[string]interface{}{
+                "id":   contract.Id_status_contract,
+                "name": contract.Name_status_contract,
+            },
+            "tags": tags,
+        }
+        contractsResponse = append(contractsResponse, contractResponse)
+    }
+
+    w.Header().Set("Content-Type", "application/json")
+    if err := json.NewEncoder(w).Encode(contractsResponse); err != nil {
+        http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+        return
+    }
 }
 
 func GetAllContractsByStatus(w http.ResponseWriter, r *http.Request) {
-    if r.Method!=http.MethodGet{
-        http.Error(w,"Invalid request method GetAllContractsByStatus",http.StatusBadRequest)
+    if r.Method != http.MethodGet {
+        http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
         return
     }
+
     vars := mux.Vars(r)
-    id_status_contract := vars["id_status_contract"]
-    if id_status_contract == "" {
-        http.Error(w, "id_status_contract обязательный параметр", http.StatusBadRequest)
+    idStatusStr := vars["id_status_contract"]
+    if idStatusStr == "" {
+        http.Error(w, "Status ID is required", http.StatusBadRequest)
         return
     }
-    idStatusInt, err := strconv.Atoi(id_status_contract)
+
+    idStatus, err := strconv.Atoi(idStatusStr)
     if err != nil {
-        http.Error(w, "Недопустимый id_status_contract", http.StatusBadRequest)
+        http.Error(w, "Invalid status ID", http.StatusBadRequest)
         return
     }
-   
-  
-    contracts, err := db.DBgetContractByType(idStatusInt)
+
+    contracts, err := db.DBgetContractsByStatus(idStatus)
     if err != nil {
         http.Error(w, err.Error(), http.StatusInternalServerError)
         return
     }
-    var contractsResponse []map[string]interface{}
+
+    var response []map[string]interface{}
     for _, contract := range contracts {
-        contractResponse := map[string]interface{}{
-            "contract_id": contract.Id_contract,
-            "name_contract": contract.Name_contract,
-            "date_create_contract": contract.Date_contract_create,
-            "user_id": contract.Id_user,
-            "date_conclusion": contract.Date_conclusion,
-            "date_start": contract.Date_contract_create,
-            "date_end": contract.Date_end,
-            "id_type": contract.Id_type,
-            "name_type_contract": contract.Name_type,
-            "id_counterparty": contract.Id_counterparty,
-            "name_counterparty": contract.Name_counterparty,
-            "id_status_contract": contract.Id_status_contract,
-            "name_status_contract": contract.Name_status_contract,
-            "id_teg": contract.Id_teg_contract,
-            "name_teg": contract.Tegs_contract,
+        // Подготавливаем теги
+        var tags []map[string]interface{}
+        for _, tag := range contract.Tegs {
+            tags = append(tags, map[string]interface{}{
+                "id":   tag.Id_tegs,
+                "name": tag.Name_tegs,
+            })
         }
-        contractsResponse = append(contractsResponse, contractResponse)
+
+        // Формируем структуру ответа
+        contractData := map[string]interface{}{
+            "id": contract.Id_contract,
+            "name": contract.Name_contract,
+            "dates": map[string]interface{}{
+                "conclusion": contract.Date_conclusion,
+                "create":     contract.Date_contract_create,
+                "end":       contract.Date_end,
+            },
+            "user": map[string]interface{}{
+                "id":         contract.Id_user,
+                "surname":    contract.Surname,
+                "name":       contract.Username,
+                "patronymic": contract.Patronymic,
+            },
+            "type": map[string]interface{}{
+                "id":   contract.Id_type,
+                "name": contract.Name_type,
+            },
+            "counterparty": map[string]interface{}{
+                "id":   contract.Id_counterparty,
+                "name": contract.Name_counterparty,
+            },
+            "status": map[string]interface{}{
+                "id":   contract.Id_status_contract,
+                "name": contract.Name_status_contract,
+            },
+            "tags": tags,
+        }
+        response = append(response, contractData)
     }
-    data, err:=json.Marshal(contractsResponse)
-    if err != nil {
-        http.Error(w, err.Error(), http.StatusInternalServerError)
-        return
+
+    w.Header().Set("Content-Type", "application/json")
+    if err := json.NewEncoder(w).Encode(response); err != nil {
+        http.Error(w, "Failed to encode response", http.StatusInternalServerError)
     }
-    w.WriteHeader(http.StatusOK)
-    w.Write(data)
 }
 
 func GetContractID(w http.ResponseWriter, r *http.Request) {
@@ -341,59 +423,79 @@ func GetContractID(w http.ResponseWriter, r *http.Request) {
     w.Write(data)
 }
 
-func GetUserIDContracts(w http.ResponseWriter, r *http.Request) {
+func GetUserContracts(w http.ResponseWriter, r *http.Request) {
+    // Проверка метода запроса
+    if r.Method != http.MethodGet {
+        http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+        return
+    }
 
-    if r.Method!=http.MethodGet{
-    
-        http.Error(w,"Invalid request method GetUserIDContracts",http.StatusBadRequest)
+    // Извлечение и валидация ID пользователя
+    vars := mux.Vars(r)
+    userID := vars["userID"]
+    if userID == "" {
+        http.Error(w, "User ID is required", http.StatusBadRequest)
         return
     }
-    vars:=mux.Vars(r)
-    userId:=vars["userID"]
-    if userId==""{
-        http.Error(w,"Invalid user_id",http.StatusBadRequest)
-        return
-    }
-    id, err:= strconv.Atoi(userId)
+
+    id, err := strconv.Atoi(userID)
     if err != nil {
-        log.Println(err)
-        http.Error(w, "Invalid user_id", http.StatusBadRequest)
+        http.Error(w, "Invalid user ID format", http.StatusBadRequest)
         return
     }
+
+    // Получение контрактов пользователя
     contracts, err := db.DBgetContractUserId(id)
     if err != nil {
-        http.Error(w, err.Error(), http.StatusInternalServerError)
+        http.Error(w, fmt.Sprintf("Failed to get user contracts: %v", err), 
+            http.StatusInternalServerError)
         return
     }
-    var contractsResponse []map[string]interface{}
+
+    // Формирование ответа
+    var response []map[string]interface{}
     for _, contract := range contracts {
-        contractResponse := map[string]interface{}{
-            "contract_id": contract.Id_contract,
-            "name_contract": contract.Name_contract,
-            "date_create_contract": contract.Date_contract_create,
-            "user_id": contract.Id_user,
-            "date_conclusion": contract.Date_conclusion,
-            "date_start": contract.Date_contract_create,
-            "date_end": contract.Date_end,
-            "id_type": contract.Id_type,
-            "name_type_contract": contract.Name_type,
-            "id_counterparty": contract.Id_counterparty,
-            "name_counterparty": contract.Name_counterparty,
-            "id_status_contract": contract.Id_status_contract,
-            "name_status_contract": contract.Name_status_contract,
-            "id_teg": contract.Id_teg_contract,
-            "name_teg": contract.Tegs_contract,
+        // Подготовка тегов
+        var tags []map[string]interface{}
+        for _, tag := range contract.Tegs {
+            tags = append(tags, map[string]interface{}{
+                "id":   tag.Id_tegs,
+                "name": tag.Name_tegs,
+            })
         }
-        contractsResponse = append(contractsResponse, contractResponse)
+
+        // Структура контракта
+        contractData := map[string]interface{}{
+            "id":   contract.Id_contract,
+            "name": contract.Name_contract,
+            "dates": map[string]interface{}{
+                "create":      contract.Date_contract_create,
+                "conclusion":  contract.Date_conclusion,
+                "end":         contract.Date_end,
+            },
+            "type": map[string]interface{}{
+                "id":   contract.Id_type,
+                "name": contract.Name_type,
+            },
+            "counterparty": map[string]interface{}{
+                "id":   contract.Id_counterparty,
+                "name": contract.Name_counterparty,
+            },
+            "status": map[string]interface{}{
+                "id":   contract.Id_status_contract,
+                "name": contract.Name_status_contract,
+            },
+            "tags": tags,
+        }
+        response = append(response, contractData)
     }
-    data, err:=json.Marshal(contractsResponse)  
-    if err != nil {
-        http.Error(w, err.Error(), http.StatusInternalServerError)
-        return
+
+    // Отправка ответа
+    w.Header().Set("Content-Type", "application/json")
+    if err := json.NewEncoder(w).Encode(response); err != nil {
+        http.Error(w, "Failed to encode response", 
+            http.StatusInternalServerError)
     }
-    w.WriteHeader(http.StatusOK)
-    w.Write(data)
-        
 }
 
 

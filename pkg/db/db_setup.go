@@ -50,9 +50,7 @@ func SetupDatabase() error {
 	}
 	defer tx.Rollback(context.Background())
 	
-	
-	
-	
+
 		_, err = tx.Exec(context.Background(),
 	   `CREATE TABLE IF NOT EXISTS roles (
 		id_role SERIAL PRIMARY KEY,

@@ -28,7 +28,7 @@ type Contracts struct {
 	Name_type       string    `json:"name_type"`
 	Name_counterparty string  `json:"name_counterparty"`
 	Name_status_contract string`json:"name_status_contract"`
-	Tegs_contract     string  `json:"tegs_contract"`
+	
 	Phone           string    `json:"phone"`
 	Email           string    `json:"email"`
 	Contact_info    string    `json:"contact_info"`
@@ -36,7 +36,6 @@ type Contracts struct {
 	Ogrn            string    `json:"ogrn"`
 	Adress          string    `json:"adress"`
 	Dop_info        string    `json:"dop_info"`
-	Id_teg_contract int       `json:"id_teg_contract"`
 
 }
 
@@ -51,13 +50,3 @@ type Date struct {
     Date_end time.Time `json:"date_end"`
 }
 
-// type Type_contracts struct {
-// 	Id_type_contract    int    `json:"id_type_contract"`
-// 	Name_type_contract   string `json:"d_type_contract"`
-	
-// }
-
-// type Status_contracts struct {
-// 	Id_status_contract int    `json:"id_status_contract"`
-// 	Name_status_contract        string `json:"name_status_contract"`
-// }
