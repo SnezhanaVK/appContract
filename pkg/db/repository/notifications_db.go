@@ -1,6 +1,7 @@
 // db/notifications_db.go
 package db
 
+// notifications_db.go в пакете db
 import (
 	db "appContract/pkg/db"
 	"appContract/pkg/models"

@@ -1,6 +1,7 @@
 // utils/email.go
 package utils
 
+// email.go в пакете utils
 import (
 	"fmt"
 	"log"
