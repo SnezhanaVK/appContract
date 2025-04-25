@@ -526,3 +526,4 @@ func DeleteContract(w http.ResponseWriter, r *http.Request) {
     json.NewEncoder(w).Encode(map[string]string{"message": "Contract deleted successfully"})
 }
 
+
