@@ -51,13 +51,3 @@ type Date struct {
     Date_end time.Time `json:"date_end"`
 }
 
-// type Type_contracts struct {
-// 	Id_type_contract    int    `json:"id_type_contract"`
-// 	Name_type_contract   string `json:"d_type_contract"`
-	
-// }
-
-// type Status_contracts struct {
-// 	Id_status_contract int    `json:"id_status_contract"`
-// 	Name_status_contract        string `json:"name_status_contract"`
-// }

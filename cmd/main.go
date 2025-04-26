@@ -2,8 +2,11 @@ package main
 
 import (
 	"appContract/pkg/db"
+	dbrepo "appContract/pkg/db/repository"
 	"appContract/pkg/middleware"
 	"appContract/pkg/routers"
+	service "appContract/pkg/services"
+	"appContract/pkg/utils"
 	"context"
 	"os"
 	"os/signal"
@@ -11,6 +14,8 @@ import (
 
 	"log"
 	"net/http"
+
+	"github.com/robfig/cron/v3"
 )
 
 func main() {
@@ -28,7 +33,30 @@ func main() {
 		Addr:    ":8080",
 		Handler: handlers,
 	}
+	emailSender := utils.NewEmailSender(
+		"snezhanakydryavtseva@gmail.com",    // Ваш email
+		"ixjl oetf pqop bgos",        // Пароль приложения (для Gmail)
+		"smtp.gmail.com",           // SMTP хост
+		"587",                      // SMTP порт
+	)
 	
+	notificationRepo := dbrepo.NewNotificationRepository(db.GetDBConection()) // Теперь должно работать
+	notificationService := service.NewNotificationService(notificationRepo, emailSender)
+	// Настройка cron-расписания
+	c := cron.New()
+	
+	// Запуск задачи ежедневно в 00:00
+	_, err = c.AddFunc("0 0 * * *", func() {
+		log.Println("Запуск обработки уведомлений...")
+		if err := notificationService.ProcessDailyNotifications(); err != nil {
+			log.Printf("Ошибка обработки уведомлений: %v", err)
+		}
+	})
+	if err != nil {
+		log.Fatalf("Ошибка настройки расписания: %v", err)
+	}
+	
+	c.Start()
 	
 	go func() {
 		log.Println("Сервер запущен на порту :8080")
@@ -42,6 +70,7 @@ func main() {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 	log.Println("Server is shutting down...")
+	c.Stop()
 	if err:=server.Shutdown(context.Background()); err!=nil{
 		log.Fatalf("Server shutdown error: %v", err)
 	}

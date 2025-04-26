@@ -24,7 +24,6 @@ router.HandleFunc("api/search", handlers.Search).Methods("POST")
     ContractRoutes(router)
     StageRoutes(router)
     ContractsAndStageRoutes(router)
-    // NotificationRoutes(router)
 
     
 

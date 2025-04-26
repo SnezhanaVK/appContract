@@ -1,5 +1,6 @@
 package service
 
+// notification_servis.go в папке services
 import (
 	db "appContract/pkg/db/repository"
 	"appContract/pkg/models"
@@ -22,7 +23,8 @@ func NewNotificationService(repo *db.NotificationRepository, emailer *utils.Emai
 }
 
 func (s *NotificationService) ProcessDailyNotifications() error {
-	currentDate := time.Now()
+	loc, _:=time.LoadLocation("Europe/Novosibirsk")
+	currentDate := time.Now().In(loc).Truncate(24*time.Hour)
 	notifications, err := s.repo.GetPendingNotifications(currentDate)
 	if err != nil {
 		return err
