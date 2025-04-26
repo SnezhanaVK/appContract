@@ -71,9 +71,6 @@ func GetAllUsers(w http.ResponseWriter, r *http.Request) {
     }
 }
 
-
-
-
 func GetUserID(w http.ResponseWriter, r *http.Request) {
     if r.Method != http.MethodGet {
         http.Error(w, "Invalid request method", http.StatusBadRequest)
@@ -138,6 +135,7 @@ func PostCreateUser(w http.ResponseWriter, r *http.Request) {
         http.Error(w, err.Error(), http.StatusInternalServerError)
         return
     }
+	
     w.WriteHeader(http.StatusCreated)
     json.NewEncoder(w).Encode(map[string]string{"message": "User created successfully"})
 }
@@ -164,7 +162,7 @@ func PostAddUserRole(w http.ResponseWriter, r *http.Request) {
 }
 
 
-func PutUpdateUser(w http.ResponseWriter, r *http.Request) {
+func PutUpdateUser(w http.ResponseWriter, r *http.Request) {//нужно додлать до рабочего состояния
 	if r.Method != http.MethodPut {
 		http.Error(w, "Invalid request method PutUpdateUser", http.StatusBadRequest)
 		return
@@ -184,7 +182,7 @@ func PutUpdateUser(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"message": "User updated successfully"})
 }
 
-func DeleteUser(w http.ResponseWriter, r *http.Request) {
+func DeleteUser(w http.ResponseWriter, r *http.Request) {//нужно додлать до рабочего состояния
 	if r.Method != http.MethodDelete {
 		http.Error(w, "Invalid request method DeleteUser", http.StatusBadRequest)
 		return
@@ -207,3 +205,4 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"message": "User deleted successfully"})
 
 }
+//нужно добавить удаление роли у пользовтаеля

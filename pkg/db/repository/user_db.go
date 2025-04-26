@@ -77,8 +77,6 @@ func DBgetUserAll() ([]models.Users, error) {
     return users, nil
 }
 
-
-// Измененная функция DBgetUserID
 func DBgetUserID(user_id int) ([]models.Users, error) {
     conn := db.GetDB()
     if conn == nil {

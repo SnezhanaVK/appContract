@@ -23,8 +23,6 @@ func SetupDatabase() error {
 	}
 	defer conn.Close(context.Background())
 
-
-
 	var exists bool
 
 	err = conn.QueryRow(context.Background(), `SELECT EXISTS(SELECT 1 FROM pg_database WHERE datname = 'contract_db')`).Scan(&exists)
@@ -49,9 +47,6 @@ func SetupDatabase() error {
 		return fmt.Errorf("Error starting transaction: %v", err)
 	}
 	defer tx.Rollback(context.Background())
-	
-	
-	
 	
 		_, err = tx.Exec(context.Background(),
 	   `CREATE TABLE IF NOT EXISTS roles (
@@ -196,10 +191,6 @@ if err != nil {
 	log.Fatal("Error contract_notifications creating table : ", err)
 }
 fmt.Println("Table contract_notifications created successfully")
-
-
-
-
 
 
 _, err = tx.Exec(context.Background(),`CREATE TABLE if not exists stages (
