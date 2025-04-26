@@ -11,6 +11,7 @@ func UserRoutes(router *mux.Router) {
     router.HandleFunc("/api/users", handlers.GetAllUsers).Methods("GET")
     router.HandleFunc("/api/users/{userID}", handlers.GetUserID).Methods("GET")
     router.HandleFunc("/api/users/create", handlers.PostCreateUser).Methods("POST")
+    router.HandleFunc("/api/users/addRole", handlers.PostAddUserRole).Methods("POST")
     router.HandleFunc("/api/users/{id}", handlers.PutUpdateUser).Methods("PUT")
     router.HandleFunc("/api/users/{id}", handlers.DeleteUser).Methods("DELETE")
 }

@@ -82,18 +82,26 @@ func SetupDatabase() error {
 		phone VARCHAR(20) NOT NULL,
 		photo VARCHAR(255) NOT NULL,
 		email VARCHAR(255) NOT NULL,
-		role_id int NOT NULL,
-		admin bool NOT NULL,
 		login VARCHAR(255) NOT NULL unique,
-		password VARCHAR(255) NOT NULL,
-		CONSTRAINT fk_role_id FOREIGN KEY (role_id) REFERENCES roles(id_role)
-	
+		password VARCHAR(255) NOT NULL
+		
 
 	)`)
 	if err != nil {
 		log.Fatal("Error users creating table : ", err)
 	}
 	fmt.Println("Table users created successfully")
+	_, err = tx.Exec(context.Background(),`CREATE TABLE if not exists user_by_role (
+		user_by_role SERIAL PRIMARY KEY,
+		id_user int NOT NULL,
+		id_role int NOT NULL,
+		CONSTRAINT fk_role_id FOREIGN KEY (id_role) REFERENCES roles(id_role),
+		CONSTRAINT fk_user_id FOREIGN KEY (id_user) REFERENCES users(id_user)
+	)`)
+	if err != nil {
+		log.Fatal("Error user_by_role creating table : ", err)
+	}
+	fmt.Println("Table user_by_role created successfully")
 
 	_, err = tx.Exec(context.Background(),`CREATE TABLE if not exists types_contracts (
 		id_type_contract SERIAL PRIMARY KEY,

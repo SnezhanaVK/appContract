@@ -17,8 +17,8 @@ func NewRouter() *mux.Router {
     
 
     // Вызов маршрутов
-router.HandleFunc("/", handlers.Index).Methods("GET")
-router.HandleFunc("api/search", handlers.Search).Methods("POST")
+    router.HandleFunc("/", handlers.Index).Methods("GET")
+    router.HandleFunc("api/search", handlers.Search).Methods("POST")
 
     UserRoutes(router)
     ContractRoutes(router)

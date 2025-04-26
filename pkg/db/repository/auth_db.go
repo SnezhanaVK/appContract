@@ -10,25 +10,26 @@ import (
 	"github.com/jackc/pgx"
 )
 
-func Authorize(login string, password string) (int, error) {
+func Authorize(login string, password string) ( *models.Users , error) {
     
     conn:=db.GetDB()
     if conn==nil{
-        return 0, errors.New("connection error")
+        
+        return nil, errors.New("connection error")
     }
 
     var user models.Users
-    err := conn.QueryRow(`SELECT id_user ,login, password FROM users WHERE login=$1 AND password=$2`, 
-                        login, password).Scan(&user.Id_user, &user.Login, &user.Password)
+    err := conn.QueryRow(`SELECT u.id_user ,u.login, u.password, u.role_id,r.name_role  FROM users u JOIN roles r ON u.role_id=r.id_role WHERE login=$1 AND password=$2`, 
+                        login, password).Scan(&user.Id_user, &user.Login, &user.Password, &user.Id_role, &user.Name_role)
 
     if err != nil {
         if err == pgx.ErrNoRows {
-            return 0, errors.New("user not found")
+            return nil, errors.New("user not found")
         }
-        return 0, err
+        return nil, err
     }
 
-    return user.Id_user, nil
+    return &user, nil
 }
 
 func GetAddmin(id int) (bool, error) {

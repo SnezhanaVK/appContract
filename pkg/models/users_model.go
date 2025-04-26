@@ -1,18 +1,32 @@
 package models
 
 type Users struct {
-	Id_user         int    `json:"id_user"`
-	Surname         string `json:"surname"`
-	Username        string `json:"username"`
-	Patronymic      string `json:"patronymic"`
-	Phone           string `json:"phone"`
-	Photo           string `json:"photo"`
-	Email           string `json:"email"`
-	Role_id         int    `json:"role_id"`
-	Notification_id int    `json:"notification_id"`
-	Admin           bool   `json:"admin"`
-	Login           string `json:"login"`
-	Password        string `json:"password"`
+	Id_user    int    `json:"id_user"`
+	Surname    string `json:"surname"`
+	Username   string `json:"username"`
+	Patronymic string `json:"patronymic"`
+	Phone      string `json:"phone"`
+	Photo      string `json:"photo"`
+	Email      string `json:"email"`
+	Login      string `json:"login"`
+	Password   string `json:"password"`
+	Roles      []Role `json:"roles"`
 
-	Variant_notification string `json:"variant_notification"`
+	//Notification
+	Id_notification_settings      int    `json:"id_notification"`
+	Variant_notification_settings string `json:"name_notification"`
+
+	//Role
+	Id_role   int    `json:"id_role"`
+	Name_role string `json:"name_role"`
+}
+
+// type Notification_settings struct {
+// 	Id_notification_settings      int    `json:"id_notification"`
+// 	Variant_notification_settings string `json:"name_notification"`
+// }
+
+type Role struct {
+	Id_role   int    `json:"id_role"`
+	Name_role string `json:"name_role"`
 }

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	db "appContract/pkg/db/repository"
+	"appContract/pkg/models"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -10,16 +11,12 @@ import (
 
 	"github.com/dgrijalva/jwt-go"
 )
-
-type LoginStruct struct {
-	ID       int    `json:"id"`
-    Admin    bool   `json:admin`
-	Login    string `json:"login"`
-	Password string `json:"password"`
-}
-
 type Token struct {
-	Token string `json:"token"`
+    Token string `json:"token"`
+    Id_user int `json:"id_user"`
+    Id_role int `json:"id_role"`
+    Name_role string `json:"name_role"`
+    
 }
 
 var jwtKey = []byte("secretkey")
@@ -30,22 +27,22 @@ func Login(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    var authRequest LoginStruct
-    err := json.NewDecoder(r.Body).Decode(&authRequest)
+    var user *models.Users
+    err := json.NewDecoder(r.Body).Decode(&user)
     if err != nil {
         http.Error(w, err.Error(), http.StatusBadRequest)
         return
     }
 
-    login := authRequest.Login
-    password := authRequest.Password
+    login := user.Login
+    password := user.Password
 
     if login == "" || password == "" {
         http.Error(w, "Login and password are required", http.StatusBadRequest)
         return
     }
-
-    _, err = db.Authorize(login, password)
+    
+    user, err = db.Authorize(login, password)
     if err != nil {
         http.Error(w, err.Error(), http.StatusUnauthorized)
         return
@@ -53,20 +50,25 @@ func Login(w http.ResponseWriter, r *http.Request) {
 
     // Создаем токен авторизации
     token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-        "login": login,
-        "password" : password,
+        "id": user.Id_user,
+        "login": user.Login,
+        "password" : user.Password,   
+        "role_id" : user.Id_role,
+        "name_role" : user.Name_role,
         "exp":   time.Now().Add(time.Hour * 72).Unix(),
     })
 
-    // Подписываем токен
+
     tokenString, err := token.SignedString(jwtKey)
     if err != nil {
         http.Error(w, err.Error(), http.StatusInternalServerError)
         return
     }
+   
+    response:=Token{tokenString, user.Id_user, user.Id_role, user.Name_role}
 
-    // Возвращаем токен
-    json.NewEncoder(w).Encode(Token{Token: tokenString})
+
+    json.NewEncoder(w).Encode(response)
 }
 
 func VerificationToken (w http.ResponseWriter, r *http.Request) {
@@ -110,13 +112,15 @@ func VerificationToken (w http.ResponseWriter, r *http.Request) {
         http.Error(w, "Invalid token", http.StatusUnauthorized)
         return
     }
-   id, err := db.Authorize(login,password)
+    var user *models.Users
+
+   user, err = db.Authorize(login,password)
     if err != nil {
         http.Error(w, err.Error(), http.StatusUnauthorized)
         return
     }
     
-    isAdmin, err := db.GetAddmin(id)
+    isAdmin, err := db.GetAddmin(user.Id_user)
     if err != nil {
         http.Error(w, err.Error(), http.StatusInternalServerError)
         return

@@ -3,72 +3,105 @@ package db
 import (
 	"appContract/pkg/db"
 	"appContract/pkg/models"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 )
 
 func DBgetUserAll() ([]models.Users, error) {
-	
-	conn:= db.GetDB()
-	if conn==nil{
-		return nil, errors.New("connection error")
-	}
-
-	rows, err := conn.Query(`SELECT 
-							id_user, 
-							surname, 
-							username, 
-							patronymic, 
-							phone, 
-							photo, 
-							email 
-							FROM users`)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer rows.Close()
-
-	// обработка результата
-	var users []models.Users
-	for rows.Next() {
-		var user models.Users
-		err = rows.Scan(&user.Id_user, 
-						&user.Surname, 
-						&user.Username, 
-						&user.Patronymic, 
-						&user.Phone, 
-						&user.Photo, 
-						&user.Email, 
-		) 
-						
-		if err != nil {
-			log.Fatal(err)
-		}
-		users = append(users, user)
-	}
-	return users, nil
-}
-
-func DBgetUserID(user_id int) ([]models.Users, error) {
-    conn:= db.GetDB()
-	if conn==nil{
-		return nil, errors.New("connection error")
-	}
+    conn := db.GetDB()
+    if conn == nil {
+        return nil, errors.New("connection error")
+    }
 
     rows, err := conn.Query(`SELECT 
-  u.id_user, 
-  u.surname, 
-  u.username, 
-  u.patronymic, 
-  u.phone, 
-  u.photo, 
-  u.email,
-  u.login,
-  u.notification_id,
-  n.variant_notification
-FROM users u
-JOIN notifications n ON u.notification_id = n.id_notification
-WHERE id_user=$1`, user_id)
+        u.id_user, 
+        u.surname, 
+        u.username, 
+        u.patronymic, 
+        u.phone, 
+        u.photo, 
+        u.email, 
+        r.id_role, 
+        r.name_role 
+    FROM 
+        users u 
+    INNER JOIN 
+        user_by_role ubr ON u.id_user = ubr.id_user 
+    INNER JOIN 
+        roles r ON ubr.id_role = r.id_role
+    ORDER BY u.id_user`)
+    if err != nil {
+        return nil, fmt.Errorf("query error: %v", err)
+    }
+    defer rows.Close()
+
+    usersMap := make(map[int]*models.Users)
+    for rows.Next() {
+        var user models.Users
+        var role models.Role
+        
+        err := rows.Scan(
+            &user.Id_user,
+            &user.Surname,
+            &user.Username,
+            &user.Patronymic,
+            &user.Phone,
+            &user.Photo,
+            &user.Email,
+            &role.Id_role,
+            &role.Name_role,
+        )
+        if err != nil {
+            return nil, fmt.Errorf("scan error: %v", err)
+        }
+
+        // Если пользователь уже есть в мапе, добавляем только роль
+        if existingUser, exists := usersMap[user.Id_user]; exists {
+            existingUser.Roles = append(existingUser.Roles, role)
+            continue
+        }
+
+        // Если пользователя нет в мапе, создаем новую запись
+        user.Roles = []models.Role{role}
+        usersMap[user.Id_user] = &user
+    }
+
+    // Преобразуем map в слайс
+    var users []models.Users
+    for _, u := range usersMap {
+        users = append(users, *u)
+    }
+
+    return users, nil
+}
+
+
+// Измененная функция DBgetUserID
+func DBgetUserID(user_id int) ([]models.Users, error) {
+    conn := db.GetDB()
+    if conn == nil {
+        return nil, errors.New("connection error")
+    }
+
+    rows, err := conn.Query(`
+        SELECT 
+            u.id_user,
+            u.surname,
+            u.username,
+            u.patronymic,
+            u.phone,
+            u.photo,
+            u.email,
+            u.login,
+            JSON_AGG(JSON_BUILD_OBJECT('id_role', r.id_role, 'name_role', r.name_role)) AS roles
+        FROM users u
+        LEFT JOIN user_by_role ubr ON u.id_user = ubr.id_user
+        LEFT JOIN roles r ON ubr.id_role = r.id_role
+        WHERE u.id_user = $1
+        GROUP BY u.id_user
+    `, user_id)
     if err != nil {
         return nil, err
     }
@@ -77,19 +110,28 @@ WHERE id_user=$1`, user_id)
     var users []models.Users
     for rows.Next() {
         var user models.Users
-        err = rows.Scan(&user.Id_user, 
-                        &user.Surname, 
-                        &user.Username, 
-                        &user.Patronymic, 
-                        &user.Phone, 
-                        &user.Photo,
-                        &user.Email,
-                        &user.Login,
-                        &user.Notification_id,
-                        &user.Variant_notification)
+        var rolesJSON []byte
+        
+        err = rows.Scan(
+            &user.Id_user,
+            &user.Surname,
+            &user.Username,
+            &user.Patronymic,
+            &user.Phone,
+            &user.Photo,
+            &user.Email,
+            &user.Login,
+            &rolesJSON,
+        )
         if err != nil {
             return nil, err
         }
+        
+        // Декодируем JSON с ролями
+        if err := json.Unmarshal(rolesJSON, &user.Roles); err != nil {
+            return nil, err
+        }
+        
         users = append(users, user)
     }
     return users, nil
@@ -109,13 +151,11 @@ func DBaddUser(user models.Users) error{
 	phone, 
 	photo, 
 	email, 
-	role_id, 
-	notification_id, 
-	admin, 
 	login, 
 	password
+
 	)VALUES (
-		$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11
+		$1,$2,$3,$4,$5,$6,$7,$8
 	)
 	`, 
 	user.Surname,
@@ -124,17 +164,86 @@ func DBaddUser(user models.Users) error{
 	user.Phone,
 	user.Photo,
 	user.Email,
-	user.Role_id,
-	user.Notification_id,
-	user.Admin,
 	user.Login,
 	user.Password,
 )
+
 if err!=nil{
 	log.Fatal(err)
 }
 return nil
+
 }
+func DBaddUserAdmin(user models.Users) error{
+	conn:= db.GetDB()
+	if conn==nil{
+		return errors.New("connection error")
+	}
+
+	_,err :=conn.Exec(`
+        INSERT INTO user_by_role (
+            id_user,
+            id_role
+        ) VALUES (
+            $1,
+            1
+        )
+    `, 
+        user.Id_user,
+    )
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    return nil
+}
+func DBaddUserMeneger(user models.Users) error{
+	conn:= db.GetDB()
+	if conn==nil{
+		return errors.New("connection error")
+	}
+
+	_,err :=conn.Exec(`
+        INSERT INTO user_by_role (
+            id_user,
+            id_role
+        ) VALUES (
+            $1,
+            2
+        )
+    `, 
+        user.Id_user,
+    )
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    return nil
+}
+func DBaddUserUser(user models.Users) error{
+	conn:= db.GetDB()
+	if conn==nil{
+		return errors.New("connection error")
+	}
+
+	_,err :=conn.Exec(`
+        INSERT INTO user_by_role (
+            id_user,
+            id_role
+        ) VALUES (
+            $1,
+            3
+        )
+    `, 
+        user.Id_user,
+    )
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    return nil
+}
+
 
 func DBchangeUser(user models.Users) error{
 	conn:= db.GetDB()
@@ -150,12 +259,9 @@ func DBchangeUser(user models.Users) error{
 	phone=$4,
 	photo=$5,
 	email=$6,
-	role_id=$7,
-	notification_id=$8,
-	admin=$9,
-	login=$10,
-	password=$11
-	WHERE id_user=$12
+	login=$7,
+	password=$8
+	WHERE id_user=$9
 	`, 
 	user.Surname,
 	user.Username,
@@ -163,9 +269,6 @@ func DBchangeUser(user models.Users) error{
 	user.Phone,
 	user.Photo,
 	user.Email,
-	user.Role_id,
-	user.Notification_id,
-	user.Admin,
 	user.Login,
 	user.Password,
 	user.Id_user,
