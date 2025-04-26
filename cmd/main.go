@@ -1,5 +1,6 @@
 package main
 
+// main.go в пакете cmd
 import (
 	"appContract/pkg/db"
 	dbrepo "appContract/pkg/db/repository"
@@ -40,7 +41,7 @@ func main() {
 		"587",                      // SMTP порт
 	)
 	
-	notificationRepo := dbrepo.NewNotificationRepository(db.GetDBConection()) // Теперь должно работать
+	notificationRepo := dbrepo.NewNotificationRepository(db.GetDBConection()) 
 	notificationService := service.NewNotificationService(notificationRepo, emailSender)
 	// Настройка cron-расписания
 	c := cron.New()
@@ -76,6 +77,3 @@ func main() {
 	}
 	log.Println("Server exited properly")
 }
-
-
-	
