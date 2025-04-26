@@ -1,6 +1,7 @@
 // main.go
 package main
 
+// main.go в пакете cmd
 import (
 	"appContract/pkg/db"
 	"appContract/pkg/middleware"
