@@ -1,23 +1,18 @@
 package db
 
-// notifications_db.go в папке db
-
+// notifications_db.go в пакете db
 import (
 	"appContract/pkg/models"
-	"context"
-
+	"database/sql"
 	"time"
-
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type NotificationRepository struct {
-	db *pgxpool.Pool
+	db *sql.DB
 }
 
-func NewNotificationRepository(db *pgxpool.Pool) *NotificationRepository {
-	return &NotificationRepository{
-		db: db,}
+func NewNotificationRepository(db *sql.DB) *NotificationRepository {
+	return &NotificationRepository{db: db}
 }
 
 func (r *NotificationRepository) GetPendingNotifications(currentDate time.Time) ([]models.PendingNotification, error) {
@@ -48,10 +43,11 @@ func (r *NotificationRepository) getContractNotifications(currentDate time.Time)
         JOIN users u ON cn.id_user = u.id_user
         JOIN notification_settings ns ON cn.id_notification_settings = ns.id_notification_settings
         JOIN contracts c ON cn.id_contract = c.id_contract
-        WHERE c.date_end - INTERVAL '1 day' * ns.variant_notification_settings::integer = $1
+        WHERE c.date_end >= $1
     `
 
-    rows, err := r.db.Query(context.Background(), query, currentDate)
+    // Берем только актуальные контракты (дата окончания в будущем)
+    rows, err := r.db.Query(query, currentDate)
     if err != nil {
         return nil, err
     }
@@ -62,30 +58,46 @@ func (r *NotificationRepository) getContractNotifications(currentDate time.Time)
     for rows.Next() {
         var recipient models.NotificationRecipient
         var contract models.ContractNotification
+        var daysBefore int
 
         err := rows.Scan(
-            &recipient.UserID, 
-            &recipient.Email, 
-            &recipient.FullName,
-            &recipient.SettingID, 
-            &recipient.SettingVariant,
-            &contract.ContractID, 
-            &contract.ContractName, 
-            &contract.EndDate, 
-            &contract.Notes,
+            &recipient.UserID, &recipient.Email, &recipient.FullName,
+            &recipient.SettingID, &recipient.SettingVariant,
+            &contract.ContractID, &contract.ContractName, &contract.EndDate, &contract.Notes,
         )
         if err != nil {
             return nil, err
         }
 
-        notifications = append(notifications, models.PendingNotification{
-            Recipient:  recipient,
-            Contract:   &contract,
-            NotifyDate: currentDate,
-        })
+        switch recipient.SettingVariant {
+        case "1":
+            daysBefore = 1
+        case "3":
+            daysBefore = 3
+        case "7":
+            daysBefore = 7
+        default:
+            continue
+        }
+
+        notifyDate := contract.EndDate.AddDate(0, 0, -daysBefore)
+        if isSameDay(notifyDate, currentDate) {
+            notifications = append(notifications, models.PendingNotification{
+                Recipient:  recipient,
+                Contract:   &contract,
+                NotifyDate: notifyDate,
+            })
+        }
     }
 
     return notifications, nil
+}
+
+// Вспомогательная функция для сравнения дат без времени
+func isSameDay(date1, date2 time.Time) bool {
+    y1, m1, d1 := date1.Date()
+    y2, m2, d2 := date2.Date()
+    return y1 == y2 && m1 == m2 && d1 == d2
 }
 func (r *NotificationRepository) getStageNotifications(currentDate time.Time) ([]models.PendingNotification, error) {
 	query := `
@@ -103,11 +115,14 @@ func (r *NotificationRepository) getStageNotifications(currentDate time.Time) ([
 		WHERE s.date_create_end BETWEEN $1 AND $2
 	`
 
-	rows, err := r.db.Query(context.Background(), query, currentDate)
-    if err != nil {
-        return nil, err
-    }
-    defer rows.Close()
+	startDate := currentDate
+	endDate := currentDate.AddDate(0, 0, 7)
+
+	rows, err := r.db.Query(query, startDate, endDate)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
 
 	var notifications []models.PendingNotification
 

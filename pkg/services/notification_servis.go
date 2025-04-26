@@ -1,6 +1,7 @@
 package service
 
-// notification_servis.go в папке services
+// notification_servis.go в пакете service
+
 import (
 	db "appContract/pkg/db/repository"
 	"appContract/pkg/models"
@@ -23,21 +24,33 @@ func NewNotificationService(repo *db.NotificationRepository, emailer *utils.Emai
 }
 
 func (s *NotificationService) ProcessDailyNotifications() error {
-	loc, _:=time.LoadLocation("Europe/Novosibirsk")
-	currentDate := time.Now().In(loc).Truncate(24*time.Hour)
-	notifications, err := s.repo.GetPendingNotifications(currentDate)
-	if err != nil {
-		return err
-	}
+    currentDate := time.Now()
+    log.Printf("Начало обработки уведомлений за %s", currentDate.Format("2006-01-02"))
+    
+    notifications, err := s.repo.GetPendingNotifications(currentDate)
+    if err != nil {
+        log.Printf("Ошибка получения уведомлений: %v", err)
+        return err
+    }
 
-	for _, n := range notifications {
-		content := s.prepareEmailContent(n)
-		if err := s.emailer.SendNotification(n.Recipient.Email, content); err != nil {
-			log.Printf("Failed to send notification to %s: %v", n.Recipient.Email, err)
-			continue
-		}
-		log.Printf("Notification sent to %s", n.Recipient.Email)
-	}
+    if len(notifications) == 0 {
+        log.Println("Нет уведомлений для отправки")
+        return nil
+    }
+
+    log.Printf("Найдено %d уведомлений для отправки", len(notifications))
+    
+    for _, n := range notifications {
+        content := s.prepareEmailContent(n)
+        log.Printf("Отправка уведомления для %s (%s)", n.Recipient.Email, content.Subject)
+        
+        if err := s.emailer.SendNotification(n.Recipient.Email, content); err != nil {
+            log.Printf("Ошибка отправки уведомления %s: %v", n.Recipient.Email, err)
+            continue
+        }
+        
+        log.Printf("Уведомление отправлено: %s", n.Recipient.Email)
+    }
 
     return nil
 }

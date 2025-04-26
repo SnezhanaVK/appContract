@@ -1,6 +1,6 @@
 package utils
 
-// email.go в папке utils
+// email.go в пакете utils
 import (
 	"fmt"
 	"log"
@@ -29,10 +29,7 @@ type EmailContent struct {
 }
 
 func (e *EmailSender) SendNotification(to string, content EmailContent) error {
-	if e.smtpHost == "" || e.smtpPort == "" || e.from == "" {
-        return fmt.Errorf("SMTP параметры не настроены")
-    }
-	auth := smtp.PlainAuth("", e.from, e.password, e.smtpHost)
+    auth := smtp.PlainAuth("", e.from, e.password, e.smtpHost)
 
     msg := []byte(
         "To: " + to + "\r\n" +
