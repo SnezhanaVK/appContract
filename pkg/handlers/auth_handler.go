@@ -233,6 +233,8 @@ func PutForgotPassword(w http.ResponseWriter, r *http.Request) {
     json.NewEncoder(w).Encode(map[string]string{"message": "Password updated successfully"})
 }
 
+
+
 func GetUsers(w http.ResponseWriter, r *http.Request) {
     if r.Method != http.MethodGet {
         http.Error(w, "Invalid request method", http.StatusBadRequest)

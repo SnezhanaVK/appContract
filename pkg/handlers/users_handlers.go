@@ -3,7 +3,7 @@ package handlers
 import (
 	db "appContract/pkg/db/repository"
 	"appContract/pkg/models"
-	servis "appContract/pkg/services"
+	servis "appContract/pkg/service"
 
 	"encoding/json"
 	"net/http"

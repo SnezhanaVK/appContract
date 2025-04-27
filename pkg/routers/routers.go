@@ -25,6 +25,12 @@ func NewRouter() *mux.Router {
     StageRoutes(router)
     ContractsAndStageRoutes(router)
 
+    // Добавьте новый роут
+// Тестовый эндпоинт
+
+	// Тестовый эндпоинт
+    router.HandleFunc("/test-notifications", handlers.TestNotifications).Methods("GET")
+
     
 
     return router

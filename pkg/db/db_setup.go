@@ -61,8 +61,7 @@ func SetupDatabase() error {
 
 	_, err = tx.Exec(context.Background(),`CREATE TABLE IF NOT EXISTS notification_settings (
 		id_notification_settings SERIAL PRIMARY KEY,
-		variant_notification_settings VARCHAR(30) NOT NULL
-
+		variant_notification_settings INT NOT NULL
 	)`)
 	if err != nil {
 		return fmt.Errorf("Error notification_settings creating table: %v", err)
@@ -79,7 +78,6 @@ func SetupDatabase() error {
 		email VARCHAR(255) NOT NULL,
 		login VARCHAR(255) NOT NULL unique,
 		password VARCHAR(255) NOT NULL
-		
 
 	)`)
 	if err != nil {
@@ -177,20 +175,18 @@ func SetupDatabase() error {
 	}
 	fmt.Println("Table contracts created successfully")
 	_,err=tx.Exec(context.Background(),`
-CREATE TABLE if not exists contract_notifications (
-    id_contract_notification SERIAL PRIMARY KEY,
-    id_contract int NOT NULL,
+	CREATE TABLE if not exists notification_settings_by_user (
+	id_notification_settings_by_user SERIAL PRIMARY KEY,
     id_user int NOT NULL,
     id_notification_settings int NOT NULL ,
-    CONSTRAINT fk_contract FOREIGN KEY (id_contract) REFERENCES contracts(id_contract),
     CONSTRAINT fk_user FOREIGN KEY (id_user) REFERENCES users(id_user),
 CONSTRAINT fk_notification_settings FOREIGN KEY (id_notification_settings) REFERENCES notification_settings(id_notification_settings)
 );`)
 
 if err != nil {
-	log.Fatal("Error contract_notifications creating table : ", err)
+	log.Fatal("Error notification_settings_by_user creating table : ", err)
 }
-fmt.Println("Table contract_notifications created successfully")
+fmt.Println("Table notification_settings_by_user created successfully")
 
 
 _, err = tx.Exec(context.Background(),`CREATE TABLE if not exists stages (
@@ -208,21 +204,6 @@ if err != nil {
     log.Fatal("Error stages creating table : ", err)
 }
 fmt.Println("Table stages created successfully")
-
-_,err=tx.Exec(context.Background(),`CREATE TABLE if not exists stage_notifications (
-    id_stage_notification SERIAL PRIMARY KEY,
-    id_stage int NOT NULL,
-    id_user int NOT NULL,
-    id_notification_settings int NOT NULL ,
-    CONSTRAINT fk_stage FOREIGN KEY (id_stage) REFERENCES stages(id_stage),
-    CONSTRAINT fk_user FOREIGN KEY (id_user) REFERENCES users(id_user),
-    CONSTRAINT fk_notification_settings FOREIGN KEY (id_notification_settings) REFERENCES notification_settings(id_notification_settings)
-);`)
-
-if err != nil {
-	log.Fatal("Error stage_notifications creating table : ", err)
-}
-fmt.Println("Table stage_notifications created successfully")
 
 _, err = tx.Exec(context.Background(),`CREATE TABLE if not exists history_status (
     id_history_status SERIAL PRIMARY KEY,
@@ -304,3 +285,4 @@ func CloseDB() {
 		dbPool.Close()
 	}
 }
+

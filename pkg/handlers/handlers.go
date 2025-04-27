@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	service "appContract/pkg/services"
+	service "appContract/pkg/service"
 	"encoding/json"
 	"log"
 	"net/http"

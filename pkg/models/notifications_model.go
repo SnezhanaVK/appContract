@@ -1,43 +1,29 @@
 package models
 
+import "time"
+
 //notification_model.go в папке models
 
-import (
-	"time"
-)
 
-type NotificationSetting struct {
-	ID          int    `json:"id"`
-	Variant     string `json:"variant"` // "1", "3", "7" days before
-	Description string `json:"description"`
+
+type Notification_settings struct {
+    Id_notification_settings      int       `json:"id_notification"`
+    Variant_notification_settings int       `json:"variant_notification"` // Изменено на int
+    Id_user                       int       `json:"id_user"`
+    Email                         string    `json:"email"`
+    Date_end                      time.Time `json:"date_end"`          // Для контракта
+    Date_create_end               time.Time `json:"date_create_end"`  // Для этапа
 }
 
-type NotificationRecipient struct {
-	UserID      int    `json:"user_id"`
-	Email       string `json:"email"`
-	FullName    string `json:"full_name"`
-	SettingID   int    `json:"setting_id"`
-	SettingVariant string `json:"setting_variant"`
-}
-
+// Дополнительные структуры для запросов
 type ContractNotification struct {
-	ContractID   int       `json:"contract_id"`
-	ContractName string    `json:"contract_name"`
-	EndDate      time.Time `json:"end_date"`
-	Notes        string    `json:"notes"`
+    Email      string    `json:"email"`
+    DateEnd    time.Time `json:"date_end"`
+    DaysBefore int       `json:"days_before"`
 }
 
 type StageNotification struct {
-	StageID      int       `json:"stage_id"`
-	StageName    string    `json:"stage_name"`
-	EndDate      time.Time `json:"end_date"`
-	Description  string    `json:"description"`
-	ContractName string    `json:"contract_name"`
-}
-
-type PendingNotification struct {
-	Recipient  NotificationRecipient
-	Contract   *ContractNotification
-	Stage      *StageNotification
-	NotifyDate time.Time
+    Email      string    `json:"email"`
+    DateEnd    time.Time `json:"date_create_end"`
+    DaysBefore int       `json:"days_before"`
 }
