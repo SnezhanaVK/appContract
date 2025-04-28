@@ -21,11 +21,6 @@ type Users struct {
 	Name_role string `json:"name_role"`
 }
 
-// type Notification_settings struct {
-// 	Id_notification_settings      int    `json:"id_notification"`
-// 	Variant_notification_settings string `json:"name_notification"`
-// }
-
 type Role struct {
 	Id_role   int    `json:"id_role"`
 	Name_role string `json:"name_role"`
