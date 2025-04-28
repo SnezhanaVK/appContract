@@ -206,31 +206,41 @@ func VerificationToken(w http.ResponseWriter, r *http.Request) {
 func PutForgotPassword(w http.ResponseWriter, r *http.Request) {
     if r.Method != http.MethodPut {
         http.Error(w, "Invalid request method", http.StatusBadRequest)
-        return 
+        return
     }
+
     var authRequest struct {
-        Login    string `json:"login"`
+        Email    string `json:"email"`
         Password string `json:"password"`
     }
-    err := json.NewDecoder(r.Body).Decode(&authRequest)
-    if err != nil {
-        http.Error(w, "Invalid request body PutChangePassword", http.StatusBadRequest)
+
+    if err := json.NewDecoder(r.Body).Decode(&authRequest); err != nil {
+        http.Error(w, "Invalid request body", http.StatusBadRequest)
         return
     }
-    if authRequest.Login == "" || authRequest.Password == "" {
-        http.Error(w, "Invalid request body PutChangePassword", http.StatusBadRequest)
+
+    if authRequest.Email == "" || authRequest.Password == "" {
+        http.Error(w, "Email and password are required", http.StatusBadRequest)
         return
     }
-    user, err := db.GetUser(authRequest.Login)
+
+    // Проверяем существование пользователя
+    _, err := db.GetUser(authRequest.Email)
     if err != nil {
+        if err.Error() == "User not found" {
+            http.Error(w, "User not found", http.StatusNotFound)
+        } else {
+            http.Error(w, err.Error(), http.StatusInternalServerError)
+        }
+        return
+    }
+
+    // Передаем email из запроса, а не user.Login!
+    if err := db.ChangePassword(authRequest.Email, authRequest.Password); err != nil {
         http.Error(w, err.Error(), http.StatusInternalServerError)
         return
     }
-    err = db.ChangePassword(user.Login, authRequest.Password)
-    if err != nil {
-        http.Error(w, err.Error(), http.StatusInternalServerError)
-        return
-    }
+
     w.WriteHeader(http.StatusOK)
     json.NewEncoder(w).Encode(map[string]string{"message": "Password updated successfully"})
 }

@@ -93,24 +93,34 @@ func GetAddmin(id int) (bool, error) {
 }
 
 
-func ChangePassword(login string, password string)error{
-	if password==""{
-		return errors.New("password is required")
-	}
-	conn:=db.GetDB()
-    if conn==nil{
+func ChangePassword(email string, password string) error {
+    if password == "" {
+        return errors.New("password is required")
+    }
+    conn := db.GetDB()
+    if conn == nil {
         return errors.New("connection error")
     }
 
+    result, err := conn.Exec(
+        `UPDATE users SET password = $1 WHERE email = $2`, 
+        password, 
+        email,
+    )
+    if err != nil {
+        return err
+    }
 
-	_,err:=conn.Exec(`UPDATE users SET password=$1 WHERE login=$2`,password,login)
-	if err!=nil{
-		return err
-	}
-	return nil
+    // Проверяем, была ли обновлена хотя бы одна строка
+    rowsAffected := result.RowsAffected()
+    if rowsAffected == 0 {
+        return errors.New("user not found") 
+    }
+
+    return nil
 }
 
-func GetUser(login string) (models.Users, error) {
+func GetUser(email string) (models.Users, error) {
     conn:= db.GetDB() 
     if conn==nil{
         return models.Users{}, errors.New("connection error")
@@ -119,7 +129,7 @@ func GetUser(login string) (models.Users, error) {
     var user models.Users
 
 
-    err:= conn.QueryRow(`SELECT id_user, email, login, password FROM users WHERE login = $1`, login).Scan(
+    err:= conn.QueryRow(`SELECT id_user, email, login, password FROM users WHERE email = $1`, email).Scan(
         &user.Id_user,
         &user.Email,
         &user.Login,
@@ -129,7 +139,7 @@ func GetUser(login string) (models.Users, error) {
     if err != nil {
         log.Println(err)
         if err == pgx.ErrNoRows {
-            return models.Users{}, errors.New("Пользователь не найден")
+            return models.Users{}, errors.New("User not found")
         }
         return models.Users{}, err
     }
