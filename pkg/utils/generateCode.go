@@ -15,8 +15,8 @@ func GenerateVerificationCode() string {
 	random := rand.New(source)
 	
 	// Генерация числа в диапазоне 000000-999999
-	code := random.Intn(1000000)
+	code := random.Intn(100000)
 	
 	// Форматирование с ведущими нулями
-	return fmt.Sprintf("%06d", code)
+	return fmt.Sprintf("%05d", code)
 }
