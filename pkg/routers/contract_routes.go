@@ -9,7 +9,7 @@ import (
 func ContractRoutes(router *mux.Router) {
     // Контракты
     router.HandleFunc("/api/contracts", handlers.GetAllContracts).Methods("GET")
-    router.HandleFunc("/api/contracts/user/{userID}", handlers.GetUserIDContracts).Methods("GET")
+    router.HandleFunc("/api/contracts/user/{userID}", handlers.GetUserContracts).Methods("GET")
     router.HandleFunc("/api/contracts/{contractID}", handlers.GetContractID).Methods("GET")
     router.HandleFunc("/api/contracts/byType/{idType}", handlers.GetAllContractsByType).Methods("GET")
     router.HandleFunc("/api/contracts/byDateCreate", handlers.PostAllContractsByDateCreate).Methods("POST")

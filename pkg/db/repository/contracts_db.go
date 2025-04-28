@@ -123,6 +123,7 @@ func DBgetContractByType(idType int) ([]models.Contracts, error) {
             cp.name_counterparty,
             c.id_status_contract,
             sc.name_status_contract,
+<<<<<<< HEAD
             COALESCE(
                 json_agg(
                     json_build_object(
@@ -133,12 +134,25 @@ func DBgetContractByType(idType int) ([]models.Contracts, error) {
                 '[]'::json
             ) as tegs
         FROM contracts c
+=======
+            json_agg(json_build_object(
+                'id_tegs', t.id_teg,
+                'name_tegs', t.name_teg
+            )) as tegs
+        FROM 
+            contracts c
+>>>>>>> 92cf6ffd9f02d9963238e5c50f26bf6038a09fe6
         JOIN users u ON c.id_user = u.id_user
         JOIN types_contracts tc ON c.id_type = tc.id_type_contract
         JOIN counterparty cp ON c.id_counterparty = cp.id_counterparty
         JOIN status_contracts sc ON c.id_status_contract = sc.id_status_contract
+<<<<<<< HEAD
         LEFT JOIN contracts_by_tegs cbt ON c.id_contract = cbt.id_contract
         LEFT JOIN tegs t ON cbt.id_teg = t.id_teg
+=======
+        JOIN contracts_by_tegs cbt ON c.id_contract = cbt.id_contract
+        JOIN tegs t ON cbt.id_teg = t.id_teg
+>>>>>>> 92cf6ffd9f02d9963238e5c50f26bf6038a09fe6
         WHERE c.id_type = $1
         GROUP BY 
             c.id_contract, c.name_contract, c.id_user, u.surname, u.username, u.patronymic,
@@ -156,7 +170,11 @@ func DBgetContractByType(idType int) ([]models.Contracts, error) {
     for rows.Next() {
         var contract models.Contracts
         var tegsJSON []byte
+<<<<<<< HEAD
 
+=======
+        
+>>>>>>> 92cf6ffd9f02d9963238e5c50f26bf6038a09fe6
         err = rows.Scan(
             &contract.Id_contract,
             &contract.Name_contract,
@@ -173,18 +191,31 @@ func DBgetContractByType(idType int) ([]models.Contracts, error) {
             &contract.Name_counterparty,
             &contract.Id_status_contract,
             &contract.Name_status_contract,
+<<<<<<< HEAD
             &tegsJSON, // Сканируем JSON с тегами
+=======
+            &tegsJSON,
+>>>>>>> 92cf6ffd9f02d9963238e5c50f26bf6038a09fe6
         )
         
         if err != nil {
             return nil, err
         }
+<<<<<<< HEAD
 
         // Декодируем JSON в поле Tegs структуры Contracts
         if err := json.Unmarshal(tegsJSON, &contract.Tegs); err != nil {
             return nil, err
         }
 
+=======
+        
+        // Декодируем JSON с тегами
+        if err := json.Unmarshal(tegsJSON, &contract.Tegs); err != nil {
+            return nil, err
+        }
+        
+>>>>>>> 92cf6ffd9f02d9963238e5c50f26bf6038a09fe6
         contracts = append(contracts, contract)
     }
 
@@ -212,6 +243,7 @@ func DBgetContractsByDateCreate(date models.Date) ([]models.Contracts, error) {
             cp.name_counterparty,
             c.id_status_contract,
             sc.name_status_contract,
+<<<<<<< HEAD
             COALESCE(
                 json_agg(
                     json_build_object(
@@ -222,13 +254,27 @@ func DBgetContractsByDateCreate(date models.Date) ([]models.Contracts, error) {
                 '[]'::json
             ) as tegs
         FROM contracts c
+=======
+            json_agg(json_build_object(
+                'id_tegs', t.id_teg,
+                'name_tegs', t.name_teg
+            )) as tegs
+        FROM 
+            contracts c
+>>>>>>> 92cf6ffd9f02d9963238e5c50f26bf6038a09fe6
         JOIN users u ON c.id_user = u.id_user
         JOIN types_contracts tc ON c.id_type = tc.id_type_contract
         JOIN counterparty cp ON c.id_counterparty = cp.id_counterparty
         JOIN status_contracts sc ON c.id_status_contract = sc.id_status_contract
+<<<<<<< HEAD
         LEFT JOIN contracts_by_tegs cbt ON c.id_contract = cbt.id_contract
         LEFT JOIN tegs t ON cbt.id_teg = t.id_teg
         WHERE c.date_create_contract BETWEEN $1 AND $2
+=======
+        JOIN contracts_by_tegs cbt ON c.id_contract = cbt.id_contract
+        JOIN tegs t ON cbt.id_teg = t.id_teg
+        WHERE c.date_create_contract >= $1 AND c.date_create_contract <= $2
+>>>>>>> 92cf6ffd9f02d9963238e5c50f26bf6038a09fe6
         GROUP BY 
             c.id_contract, c.name_contract, c.id_user, u.surname, u.username, u.patronymic,
             c.date_conclusion, c.date_create_contract, c.date_end, c.id_type, tc.name_type_contract,
@@ -284,10 +330,16 @@ func DBgetContractsByTegs() ([]models.Contracts, error) {
     if conn == nil {
         return nil, errors.New("DB connection is nil")
     }
+<<<<<<< HEAD
 
     rows, err := conn.Query(`
         SELECT 
             c.id_contract,
+=======
+	
+	rows, err := conn.Query(`
+	   SELECT c.id_contract,
+>>>>>>> 92cf6ffd9f02d9963238e5c50f26bf6038a09fe6
             c.name_contract,
             c.id_user,
             u.surname,
@@ -302,6 +354,7 @@ func DBgetContractsByTegs() ([]models.Contracts, error) {
             cp.name_counterparty,
             c.id_status_contract,
             sc.name_status_contract,
+<<<<<<< HEAD
             COALESCE(
                 json_agg(
                     json_build_object(
@@ -312,17 +365,34 @@ func DBgetContractsByTegs() ([]models.Contracts, error) {
                 '[]'::json
             ) as tegs
         FROM contracts c
+=======
+            json_agg(json_build_object(
+                'id_teg', t.id_teg,
+                'name_teg', t.name_teg
+            )) as tegs
+        FROM 
+            contracts c
+>>>>>>> 92cf6ffd9f02d9963238e5c50f26bf6038a09fe6
         JOIN users u ON c.id_user = u.id_user
         JOIN types_contracts tc ON c.id_type = tc.id_type_contract
         JOIN counterparty cp ON c.id_counterparty = cp.id_counterparty
         JOIN status_contracts sc ON c.id_status_contract = sc.id_status_contract
+<<<<<<< HEAD
         LEFT JOIN contracts_by_tegs cbt ON c.id_contract = cbt.id_contract
         LEFT JOIN tegs t ON cbt.id_teg = t.id_teg
+=======
+        JOIN contracts_by_tegs cbt ON c.id_contract = cbt.id_contract
+        JOIN tegs t ON cbt.id_teg = t.id_teg
+>>>>>>> 92cf6ffd9f02d9963238e5c50f26bf6038a09fe6
         GROUP BY 
             c.id_contract, c.name_contract, c.id_user, u.surname, u.username, u.patronymic,
             c.date_conclusion, c.date_create_contract, c.date_end, c.id_type, tc.name_type_contract,
             c.id_counterparty, cp.name_counterparty, c.id_status_contract, sc.name_status_contract
+<<<<<<< HEAD
         ORDER BY c.id_contract
+=======
+        ORDER BY MIN(t.id_teg)
+>>>>>>> 92cf6ffd9f02d9963238e5c50f26bf6038a09fe6
     `)
     
     if err != nil {
@@ -351,20 +421,29 @@ func DBgetContractsByTegs() ([]models.Contracts, error) {
             &contract.Name_counterparty,
             &contract.Id_status_contract,
             &contract.Name_status_contract,
+<<<<<<< HEAD
             &tegsJSON, // Сканируем JSON с тегами
+=======
+            &tegsJSON,
+>>>>>>> 92cf6ffd9f02d9963238e5c50f26bf6038a09fe6
         )
         
         if err != nil {
             return nil, err
         }
         
+<<<<<<< HEAD
         // Декодируем JSON в структуру тегов
+=======
+        // Декодируем JSON с тегами
+>>>>>>> 92cf6ffd9f02d9963238e5c50f26bf6038a09fe6
         if err := json.Unmarshal(tegsJSON, &contract.Tegs); err != nil {
             return nil, err
         }
         
         contracts = append(contracts, contract)
     }
+<<<<<<< HEAD
     
     return contracts, nil
 }
@@ -375,6 +454,19 @@ func DBgetContractsByStatus() ([]models.Contracts, error) {
         return nil, errors.New("connection error")
     }
 
+=======
+
+    return contracts, nil
+}
+
+func DBgetContractsByStatus( isStatus int) ([]models.Contracts, error) {
+    
+    conn:= db.GetDB()
+    if conn==nil{
+        return nil, errors.New("connection error")
+    }
+    
+>>>>>>> 92cf6ffd9f02d9963238e5c50f26bf6038a09fe6
     rows, err := conn.Query(`
         SELECT 
             c.id_contract,
@@ -392,6 +484,7 @@ func DBgetContractsByStatus() ([]models.Contracts, error) {
             cp.name_counterparty,
             c.id_status_contract,
             sc.name_status_contract,
+<<<<<<< HEAD
             COALESCE(
                 json_agg(
                     json_build_object(
@@ -401,20 +494,37 @@ func DBgetContractsByStatus() ([]models.Contracts, error) {
                 ) FILTER (WHERE t.id_teg IS NOT NULL),
                 '[]'::json
             ) as tegs
+=======
+            json_agg(json_build_object(
+                'id_teg', t.id_teg,
+                'name_teg', t.name_teg
+            )) as tegs
+>>>>>>> 92cf6ffd9f02d9963238e5c50f26bf6038a09fe6
         FROM contracts c
         JOIN users u ON c.id_user = u.id_user
         JOIN types_contracts tc ON c.id_type = tc.id_type_contract
         JOIN counterparty cp ON c.id_counterparty = cp.id_counterparty
         JOIN status_contracts sc ON c.id_status_contract = sc.id_status_contract
+<<<<<<< HEAD
         LEFT JOIN contracts_by_tegs cbt ON c.id_contract = cbt.id_contract
         LEFT JOIN tegs t ON cbt.id_teg = t.id_teg
+=======
+        JOIN contracts_by_tegs cbt ON c.id_contract = cbt.id_contract
+        JOIN tegs t ON cbt.id_teg = t.id_teg
+        WHERE c.id_status_contract = $1
+>>>>>>> 92cf6ffd9f02d9963238e5c50f26bf6038a09fe6
         GROUP BY 
             c.id_contract, c.name_contract, c.id_user, u.surname, u.username, u.patronymic,
             c.date_conclusion, c.date_create_contract, c.date_end, c.id_type, tc.name_type_contract,
             c.id_counterparty, cp.name_counterparty, c.id_status_contract, sc.name_status_contract
+<<<<<<< HEAD
         ORDER BY c.id_status_contract
     `)
     
+=======
+        ORDER BY c.date_create_contract DESC
+    `, isStatus)
+>>>>>>> 92cf6ffd9f02d9963238e5c50f26bf6038a09fe6
     if err != nil {
         return nil, err
     }
@@ -424,7 +534,11 @@ func DBgetContractsByStatus() ([]models.Contracts, error) {
     for rows.Next() {
         var contract models.Contracts
         var tegsJSON []byte
+<<<<<<< HEAD
 
+=======
+        
+>>>>>>> 92cf6ffd9f02d9963238e5c50f26bf6038a09fe6
         err = rows.Scan(
             &contract.Id_contract,
             &contract.Name_contract,
@@ -443,6 +557,7 @@ func DBgetContractsByStatus() ([]models.Contracts, error) {
             &contract.Name_status_contract,
             &tegsJSON,
         )
+<<<<<<< HEAD
         
         if err != nil {
             return nil, err
@@ -453,6 +568,16 @@ func DBgetContractsByStatus() ([]models.Contracts, error) {
             return nil, err
         }
 
+=======
+        if err != nil {
+            return nil, err
+        }
+        
+        if err := json.Unmarshal(tegsJSON, &contract.Tegs); err != nil {
+            return nil, err
+        }
+        
+>>>>>>> 92cf6ffd9f02d9963238e5c50f26bf6038a09fe6
         contracts = append(contracts, contract)
     }
 

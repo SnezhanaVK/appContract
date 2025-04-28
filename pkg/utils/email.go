@@ -40,6 +40,7 @@ type EmailContent struct {
 }
 
 func (e *EmailSender) SendNotification(to string, content EmailContent) error {
+<<<<<<< HEAD
     if e.smtpHost == "" || e.smtpPort == "" || e.from == "" {
         return fmt.Errorf("SMTP параметры не настроены")
     }
@@ -58,5 +59,24 @@ func (e *EmailSender) SendNotification(to string, content EmailContent) error {
         log.Printf("Ошибка отправки письма: %v", err)
         return err
     }
+=======
+    auth := smtp.PlainAuth("", e.from, e.password, e.smtpHost)
+
+    msg := []byte(
+        "To: " + to + "\r\n" +
+            "Subject: " + content.Subject + "\r\n" +
+            "Content-Type: text/html; charset=UTF-8\r\n" +
+            "\r\n" +
+            content.Body + "\r\n",
+    )
+
+    // Таймаут 10 секунд для SMTP соединения
+    err := smtp.SendMail(e.smtpHost+":"+e.smtpPort, auth, e.from, []string{to}, msg)
+    if err != nil {
+        log.Printf("SMTP ошибка: %v", err)
+        return fmt.Errorf("ошибка отправки email: %v", err)
+    }
+    
+>>>>>>> 92cf6ffd9f02d9963238e5c50f26bf6038a09fe6
     return nil
 }
