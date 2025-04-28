@@ -842,3 +842,4 @@ func DBdeleteContract(contract_id int)error{
 		}
 		return nil
 }
+
