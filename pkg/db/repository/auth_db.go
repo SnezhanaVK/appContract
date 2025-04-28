@@ -137,3 +137,31 @@ func GetUser(login string) (models.Users, error) {
     log.Println("User found:", user)
     return user, nil
 }
+
+func GetUserByEmail(email string) (models.Users, error) {
+    conn:= db.GetDB() 
+    if conn==nil{
+        return models.Users{}, errors.New("connection error")
+    }
+
+    var user models.Users
+
+
+    err:= conn.QueryRow(`SELECT id_user, email, login, password FROM users WHERE email = $1`, email).Scan(
+        &user.Id_user,
+        &user.Email,
+        &user.Login,
+        &user.Password,
+    )
+
+    if err != nil {
+        log.Println(err)
+        if err == pgx.ErrNoRows {
+            return models.Users{}, errors.New("Пользователь не найден")
+        }
+        return models.Users{}, err
+    }
+
+    log.Println("User found:", user)
+    return user, nil
+}

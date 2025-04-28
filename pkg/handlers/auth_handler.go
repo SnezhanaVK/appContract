@@ -3,6 +3,8 @@ package handlers
 import (
 	db "appContract/pkg/db/repository"
 	"appContract/pkg/models"
+	"appContract/pkg/service"
+
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -251,4 +253,61 @@ func GetUsers(w http.ResponseWriter, r *http.Request) {
         return
     }
     json.NewEncoder(w).Encode(user)
+}
+
+func PostSendEmail(w http.ResponseWriter, r *http.Request) {
+    if r.Method != http.MethodPost {
+        http.Error(w, "Invalid request method", http.StatusBadRequest)
+        return
+    }
+    var emailRequest struct {
+        Email string `json:"email"`
+    }
+    err := json.NewDecoder(r.Body).Decode(&emailRequest)
+    if err != nil {
+        http.Error(w, "Invalid request body", http.StatusBadRequest)
+        return
+    }
+    var user models.Users
+    user, err = db.GetUserByEmail(emailRequest.Email)
+    if err != nil {
+        http.Error(w, err.Error(), http.StatusInternalServerError)
+        return
+    }
+    
+
+    
+    service.SendingCode(user)
+
+    w.WriteHeader(http.StatusOK)
+    json.NewEncoder(w).Encode(map[string]string{"message": "Email sent successfully"})
+}
+
+
+
+
+
+func PostVerifyCode(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Invalid request method", http.StatusBadRequest)
+		return
+	}
+
+	var request struct {
+		Email string `json:"email"`
+		Code  string `json:"code"`
+	}
+
+	err := json.NewDecoder(r.Body).Decode(&request)
+	if err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if service.VerifyCode(request.Email, request.Code) {
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]string{"message": "Code verified successfully"})
+	} else {
+		http.Error(w, "Invalid or expired code", http.StatusUnauthorized)
+	}
 }

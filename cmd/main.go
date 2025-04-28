@@ -25,13 +25,9 @@ func main() {
     defer db.CloseDB()
     db.ConnectDB()
 
-    emailSender := utils.NewEmailSender(
-        "snezhanakydryavtseva@gmail.com",
-        "ixjl oetf pqop bgos",
-        "smtp.gmail.com",
-        "587",
-    )
-	service.InitEmailSender(emailSender)
+    // Используем функцию с предустановленными параметрами
+    emailSender := utils.NewDefaultEmailSender()
+    service.InitEmailSender(emailSender)
 
     router := routers.NewRouter()
     handlers := middleware.CORS(router)
@@ -43,7 +39,6 @@ func main() {
 
     c := cron.New()
     
-    // Обновленный вызов
     _, err = c.AddFunc("0 0 * * *", func() {
         log.Println("Запуск обработки уведомлений...")
         if err := service.ProcessDailyNotifications(); err != nil {
