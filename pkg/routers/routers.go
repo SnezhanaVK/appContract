@@ -12,6 +12,7 @@ func NewRouter() *mux.Router {
     // Авторизация
     router.HandleFunc("/api/authorizations", handlers.Login).Methods("POST")
     router.HandleFunc("/api/authorizations/token", handlers.VerificationToken).Methods("GET")
+    router.HandleFunc("/api/authorizations/logout",handlers.Logout).Methods("GET")
     router.HandleFunc("/api/authorizations/forgot-password", handlers.PutForgotPassword).Methods("PUT")
     router.HandleFunc("/api/authorizations/sendingCode", handlers.PostSendEmail).Methods("POST")
     router.HandleFunc("/api/authorizations/verifyCode", handlers.PostVerifyCode).Methods("POST")

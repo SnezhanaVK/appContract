@@ -120,6 +120,23 @@ func respondWithBool(w http.ResponseWriter, result bool) {
     w.Header().Set("Content-Type", "application/json")
     json.NewEncoder(w).Encode(map[string]bool{"valid": result})
 }
+func Logout(w http.ResponseWriter, r *http.Request) {
+	// Создаем куку с таким же именем ("token"), но с истекшим сроком действия
+	http.SetCookie(w, &http.Cookie{
+		Name:     "token",
+		Value:    "",
+		Path:     "/",
+		Expires:  time.Unix(0, 0),  // Дата в прошлом (мгновенно истекает)
+		MaxAge:   -1,               // Немедленное удаление куки
+		HttpOnly: true,
+		Secure:   true,             // Должно совпадать с настройками при логине
+		SameSite: http.SameSiteLaxMode,
+	})
+
+	// Отправляем успешный ответ
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]bool{"success": true})
+}
 
 func PutForgotPassword(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPut {
