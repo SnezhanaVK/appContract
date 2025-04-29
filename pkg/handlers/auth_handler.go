@@ -8,24 +8,24 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/dgrijalva/jwt-go"
 	"net/http"
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/dgrijalva/jwt-go"
 )
 
+// Обновленный обработчик Login
 var jwtKey = []byte("secretkey")
 
-// Измененная структура Token
-type Token struct {
-	Token   string `json:"token"`
-	Id_user int    `json:"id_user"`
-	Admin   bool   `json:"admin"`
-	Meneger bool   `json:"meneger"`
+// AuthResponse структура для ответа после авторизации (без токена)
+type AuthResponse struct {
+	Id_user int  `json:"id_user"`
+	Admin   bool `json:"admin"`
+	Meneger bool `json:"meneger"`
 }
 
-// Обновленный обработчик Login
 func Login(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Invalid request method", http.StatusBadRequest)
@@ -66,8 +66,19 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response := Token{
-		Token:   tokenString,
+	// Устанавливаем токен в куки
+	http.SetCookie(w, &http.Cookie{
+		Name:     "token",
+		Value:    tokenString,
+		Expires:  time.Now().Add(72 * time.Hour),
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   true, // В production должно быть true
+		SameSite: http.SameSiteLaxMode,
+	})
+
+	// Отправляем ответ с остальными данными пользователя
+	response := AuthResponse{
 		Id_user: authUser.Id_user,
 		Admin:   authUser.Admin,
 		Meneger: authUser.Meneger,
