@@ -4,14 +4,17 @@ import (
 	db "appContract/pkg/db"
 	"appContract/pkg/models"
 	"database/sql"
-	"encoding/json"
+
+	//"encoding/json"
 	"errors"
-	"fmt"
+	//"fmt"
 	"log"
 
 	"github.com/jackc/pgx"
+	"github.com/lib/pq"
 )
 
+// Изменения в SQL-запросе
 func Authorize(login string, password string) (*models.Users, error) {
     conn := db.GetDB()
     if conn == nil {
@@ -24,10 +27,7 @@ func Authorize(login string, password string) (*models.Users, error) {
             u.email,
             u.login,
             u.password,
-            COALESCE(json_agg(json_build_object(
-                'id_role', r.id_role, 
-                'name_role', r.name_role
-            )) FILTER (WHERE r.id_role IS NOT NULL), '[]'::json) AS roles
+            ARRAY_AGG(r.id_role) AS roles  
         FROM users u
         LEFT JOIN user_by_role ubr ON u.id_user = ubr.id_user
         LEFT JOIN roles r ON ubr.id_role = r.id_role
@@ -36,142 +36,150 @@ func Authorize(login string, password string) (*models.Users, error) {
     `
 
     var user models.Users
-    var rolesJSON []byte
+    var roles []int
 
+    // Используем pq.Int32Array для обработки NULL
+    var pgRoles pq.Int32Array
+    
     err := conn.QueryRow(query, login, password).Scan(
         &user.Id_user,
         &user.Email,
         &user.Login,
         &user.Password,
-        &rolesJSON,
+        &pgRoles,
     )
 
     if err != nil {
-        if err == pgx.ErrNoRows {
+        if errors.Is(err, pgx.ErrNoRows) {
             return nil, errors.New("user not found")
         }
         return nil, err
     }
 
-    // Декодируем роли
-    if err := json.Unmarshal(rolesJSON, &user.Roles); err != nil {
-        return nil, fmt.Errorf("failed to decode roles: %v", err)
+    // Преобразование pq.Int32Array в []int
+    roles = make([]int, len(pgRoles))
+    for i, v := range pgRoles {
+        roles[i] = int(v)
     }
 
-    // Заполняем первую роль для совместимости
-    if len(user.Roles) > 0 {
-        user.Id_role = user.Roles[0].Id_role
-        user.Name_role = user.Roles[0].Name_role
-    } else {
-        user.Id_role = 0
-        user.Name_role = ""
+    // Обработка NULL массива
+    if len(roles) == 1 && roles[0] == 0 {
+        roles = []int{}
+    }
+
+    user.Admin = false
+    user.Meneger = false
+    for _, role := range roles {
+        if role == 1 {
+            user.Admin = true
+        }
+        if role == 2 {
+            user.Meneger = true
+        }
     }
 
     return &user, nil
 }
 
 func GetAddmin(id int) (bool, error) {
-    conn:= db.GetDB()
-    if conn==nil{
-        return false, errors.New("connection error")
-    }
+	conn := db.GetDB()
+	if conn == nil {
+		return false, errors.New("connection error")
+	}
 
-    var isAdmin sql.NullBool
-    err := conn.QueryRow(`SELECT admin FROM users WHERE id_user=$1`, id).Scan(&isAdmin)
-    if err != nil {
-        if err == sql.ErrNoRows {
-            return false, errors.New("user not found")
-        }
-        return false, err
-    }
+	var isAdmin sql.NullBool
+	err := conn.QueryRow(`SELECT admin FROM users WHERE id_user=$1`, id).Scan(&isAdmin)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return false, errors.New("user not found")
+		}
+		return false, err
+	}
 
-    if !isAdmin.Valid {
-        return false, errors.New("admin value is null")
-    }
+	if !isAdmin.Valid {
+		return false, errors.New("admin value is null")
+	}
 
-    return isAdmin.Bool, nil
+	return isAdmin.Bool, nil
 }
 
-
 func ChangePassword(email string, password string) error {
-    if password == "" {
-        return errors.New("password is required")
-    }
-    conn := db.GetDB()
-    if conn == nil {
-        return errors.New("connection error")
-    }
+	if password == "" {
+		return errors.New("password is required")
+	}
+	conn := db.GetDB()
+	if conn == nil {
+		return errors.New("connection error")
+	}
 
-    result, err := conn.Exec(
-        `UPDATE users SET password = $1 WHERE email = $2`, 
-        password, 
-        email,
-    )
-    if err != nil {
-        return err
-    }
+	result, err := conn.Exec(
+		`UPDATE users SET password = $1 WHERE email = $2`,
+		password,
+		email,
+	)
+	if err != nil {
+		return err
+	}
 
-    // Проверяем, была ли обновлена хотя бы одна строка
-    rowsAffected := result.RowsAffected()
-    if rowsAffected == 0 {
-        return errors.New("user not found") 
-    }
+	// Проверяем, была ли обновлена хотя бы одна строка
+	rowsAffected := result.RowsAffected()
+	if rowsAffected == 0 {
+		return errors.New("user not found")
+	}
 
-    return nil
+	return nil
 }
 
 func GetUser(email string) (models.Users, error) {
-    conn:= db.GetDB() 
-    if conn==nil{
-        return models.Users{}, errors.New("connection error")
-    }
+	conn := db.GetDB()
+	if conn == nil {
+		return models.Users{}, errors.New("connection error")
+	}
 
-    var user models.Users
+	var user models.Users
 
+	err := conn.QueryRow(`SELECT id_user, email, login, password FROM users WHERE email = $1`, email).Scan(
+		&user.Id_user,
+		&user.Email,
+		&user.Login,
+		&user.Password,
+	)
 
-    err:= conn.QueryRow(`SELECT id_user, email, login, password FROM users WHERE email = $1`, email).Scan(
-        &user.Id_user,
-        &user.Email,
-        &user.Login,
-        &user.Password,
-    )
+	if err != nil {
+		log.Println(err)
+		if err == pgx.ErrNoRows {
+			return models.Users{}, errors.New("User not found")
+		}
+		return models.Users{}, err
+	}
 
-    if err != nil {
-        log.Println(err)
-        if err == pgx.ErrNoRows {
-            return models.Users{}, errors.New("User not found")
-        }
-        return models.Users{}, err
-    }
-
-    log.Println("User found:", user)
-    return user, nil
+	log.Println("User found:", user)
+	return user, nil
 }
 
 func GetUserByEmail(email string) (models.Users, error) {
-    conn:= db.GetDB() 
-    if conn==nil{
-        return models.Users{}, errors.New("connection error")
-    }
+	conn := db.GetDB()
+	if conn == nil {
+		return models.Users{}, errors.New("connection error")
+	}
 
-    var user models.Users
+	var user models.Users
 
+	err := conn.QueryRow(`SELECT id_user, email, login, password FROM users WHERE email = $1`, email).Scan(
+		&user.Id_user,
+		&user.Email,
+		&user.Login,
+		&user.Password,
+	)
 
-    err:= conn.QueryRow(`SELECT id_user, email, login, password FROM users WHERE email = $1`, email).Scan(
-        &user.Id_user,
-        &user.Email,
-        &user.Login,
-        &user.Password,
-    )
+	if err != nil {
+		log.Println(err)
+		if err == pgx.ErrNoRows {
+			return models.Users{}, errors.New("Пользователь не найден")
+		}
+		return models.Users{}, err
+	}
 
-    if err != nil {
-        log.Println(err)
-        if err == pgx.ErrNoRows {
-            return models.Users{}, errors.New("Пользователь не найден")
-        }
-        return models.Users{}, err
-    }
-
-    log.Println("User found:", user)
-    return user, nil
+	log.Println("User found:", user)
+	return user, nil
 }
