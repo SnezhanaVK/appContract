@@ -4,13 +4,13 @@ import (
 	db "appContract/pkg/db/repository"
 	"appContract/pkg/models"
 	"appContract/pkg/service"
-	"database/sql"
+
 	"encoding/json"
-	"errors"
+
 	"fmt"
 	"net/http"
-	"sort"
-	"strings"
+
+	//"strings"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
@@ -23,7 +23,7 @@ var jwtKey = []byte("secretkey")
 type AuthResponse struct {
 	Id_user int  `json:"id_user"`
 	Admin   bool `json:"admin"`
-	Meneger bool `json:"meneger"`
+	Manager bool `json:"meneger"`
 }
 
 func Login(w http.ResponseWriter, r *http.Request) {
@@ -56,7 +56,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		"id":      authUser.Id_user,
 		"login":   authUser.Login,
 		"admin":   authUser.Admin,
-		"meneger": authUser.Meneger,
+		"manager": authUser.Manager,
 		"exp":     time.Now().Add(time.Hour * 72).Unix(),
 	})
 
@@ -81,7 +81,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	response := AuthResponse{
 		Id_user: authUser.Id_user,
 		Admin:   authUser.Admin,
-		Meneger: authUser.Meneger,
+		Manager: authUser.Manager,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -90,124 +90,39 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	}
 }
 func VerificationToken(w http.ResponseWriter, r *http.Request) {
-	// Нормализация заголовка
-	authHeader := strings.TrimSpace(r.Header.Get("Authorization"))
-	if authHeader == "" {
-		http.Error(w, "Authorization header is required", http.StatusUnauthorized)
-		return
-	}
+    // Получаем токен из куки
+    cookie, err := r.Cookie("token")
+    if err != nil {
+        if err == http.ErrNoCookie {
+            respondWithBool(w, false)
+            return
+        }
+        respondWithBool(w, false)
+        return
+    }
 
-	// Гибкое извлечение токена
-	var tokenString string
-	if strings.HasPrefix(authHeader, "Bearer ") {
-		tokenString = strings.TrimPrefix(authHeader, "Bearer ")
-	} else {
-		tokenString = authHeader
-	}
+    tokenString := cookie.Value
 
-	// Парсинг токена
-	token, err := jwt.ParseWithClaims(tokenString, &jwt.MapClaims{}, func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-		}
-		return jwtKey, nil
-	})
+    // Парсинг токена
+    token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+        if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+            return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+        }
+        return jwtKey, nil
+    })
 
-	if err != nil {
-		http.Error(w, "Invalid token: "+err.Error(), http.StatusUnauthorized)
-		return
-	}
+    if err != nil || !token.Valid {
+        respondWithBool(w, false)
+        return
+    }
 
-	// Проверка валидности claims
-	claims, ok := token.Claims.(*jwt.MapClaims)
-	if !ok || !token.Valid {
-		http.Error(w, "Invalid token", http.StatusUnauthorized)
-		return
-	}
+    // Если токен валиден
+    respondWithBool(w, true)
+}
 
-	// Извлечение данных
-	id, ok := (*claims)["id"].(float64)
-	if !ok || id == 0 {
-		http.Error(w, "Invalid token: missing user ID", http.StatusUnauthorized)
-		return
-	}
-
-	login, ok := (*claims)["login"].(string)
-	if !ok || login == "" {
-		http.Error(w, "Invalid token: missing login", http.StatusUnauthorized)
-		return
-	}
-
-	// Проверка пользователя в БД
-	user, err := db.GetUser(login)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			http.Error(w, "User not found", http.StatusUnauthorized)
-			return
-		}
-		http.Error(w, "Database error", http.StatusInternalServerError)
-		return
-	}
-
-	if user.Id_user != int(id) {
-		http.Error(w, "Token-user mismatch", http.StatusUnauthorized)
-		return
-	}
-
-	// Проверка ролей
-
-	if roles, ok := (*claims)["roles"].([]interface{}); ok {
-		for _, role := range roles {
-			if roleMap, ok := role.(map[string]interface{}); ok {
-				if name, ok := roleMap["name"].(string); ok && name == "admin" {
-					// Perform some action if the user is an admin
-					http.Error(w, "Admin access granted", http.StatusOK)
-					return
-				}
-			}
-		}
-	}
-
-	// Ответ
-	// Собираем все роли пользователя
-	var roles []string
-	if rolesRaw, ok := (*claims)["roles"].([]interface{}); ok {
-		for _, r := range rolesRaw {
-			if roleMap, ok := r.(map[string]interface{}); ok {
-				if roleName, ok := roleMap["name"].(string); ok {
-					// Убираем лишние пробелы и проверяем длину
-					roleName = strings.TrimSpace(roleName)
-					if roleName != "" {
-						roles = append(roles, roleName)
-					}
-				}
-			}
-		}
-	}
-
-	// Формируем ответ
-	responseText := "Authorized as user" // базовый текст
-	if len(roles) > 0 {
-		// Упорядочиваем роли: админ всегда первый
-		sort.Slice(roles, func(i, j int) bool {
-			return roles[i] == "admin" || (roles[i] == "manager" && roles[j] == "user")
-		})
-
-		// Объединяем уникальные роли
-		uniqueRoles := make([]string, 0)
-		seen := make(map[string]bool)
-		for _, role := range roles {
-			if !seen[role] {
-				seen[role] = true
-				uniqueRoles = append(uniqueRoles, role)
-			}
-		}
-
-		responseText = "Authorized as " + strings.Join(uniqueRoles, ", ")
-	}
-
-	w.Header().Set("Content-Type", "text/plain")
-	w.Write([]byte(responseText))
+func respondWithBool(w http.ResponseWriter, result bool) {
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(map[string]bool{"valid": result})
 }
 
 func PutForgotPassword(w http.ResponseWriter, r *http.Request) {

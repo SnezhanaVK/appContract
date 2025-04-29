@@ -11,7 +11,7 @@ type Users struct {
 	Login      string `json:"login"`
 	Password   string `json:"password"`
 	Admin      bool   `json:"admin"`
-	Meneger    bool   `json:"meneger"`
+	Manager    bool   `json:"manager"`
 	Roles      []Role `json:"roles"`
 
 	//Notification

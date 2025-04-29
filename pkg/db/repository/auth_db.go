@@ -68,13 +68,13 @@ func Authorize(login string, password string) (*models.Users, error) {
     }
 
     user.Admin = false
-    user.Meneger = false
+    user.Manager = false
     for _, role := range roles {
         if role == 1 {
             user.Admin = true
         }
         if role == 2 {
-            user.Meneger = true
+            user.Manager = true
         }
     }
 
