@@ -156,7 +156,6 @@ func DBgetContractByType(idType int) ([]models.Contracts, error) {
     for rows.Next() {
         var contract models.Contracts
         var tegsJSON []byte
-
         err = rows.Scan(
             &contract.Id_contract,
             &contract.Name_contract,
@@ -424,7 +423,6 @@ func DBgetContractsByStatus() ([]models.Contracts, error) {
     for rows.Next() {
         var contract models.Contracts
         var tegsJSON []byte
-
         err = rows.Scan(
             &contract.Id_contract,
             &contract.Name_contract,
