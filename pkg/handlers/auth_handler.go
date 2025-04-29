@@ -4,13 +4,9 @@ import (
 	db "appContract/pkg/db/repository"
 	"appContract/pkg/models"
 	"appContract/pkg/service"
-
 	"encoding/json"
-
 	"fmt"
 	"net/http"
-
-	//"strings"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
@@ -23,7 +19,7 @@ var jwtKey = []byte("secretkey")
 type AuthResponse struct {
 	Id_user int  `json:"id_user"`
 	Admin   bool `json:"admin"`
-	Manager bool `json:"meneger"`
+	Manager bool `json:"manager"`
 }
 
 func Login(w http.ResponseWriter, r *http.Request) {
