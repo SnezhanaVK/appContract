@@ -1,7 +1,6 @@
 // main.go
 package main
 
-// main.go в пакете cmd
 import (
 	"appContract/pkg/db"
 	"appContract/pkg/middleware"
@@ -72,4 +71,5 @@ func main() {
     log.Println("Server exited properly")
 }
 
+	
 	
