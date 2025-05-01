@@ -5,6 +5,7 @@ package db
 import (
 	db "appContract/pkg/db"
 	"appContract/pkg/models"
+	"context"
 	"fmt"
 )
 
@@ -22,7 +23,7 @@ func GetContractNotifications() ([]models.ContractNotification, error) {
 		JOIN notification_settings ns ON nsu.id_notification_settings = ns.id_notification_settings
 		WHERE c.date_end - ns.variant_notification_settings = CURRENT_DATE`
 
-	rows, err := conn.Query(query)
+	rows, err := conn.Query( context.Background(),query)
 	if err != nil {
 		return nil, fmt.Errorf("error querying contract notifications: %v", err)
 	}
@@ -55,7 +56,7 @@ func GetStageNotifications() ([]models.StageNotification, error) {
 		JOIN notification_settings ns ON nsu.id_notification_settings = ns.id_notification_settings
 		WHERE s.date_create_end - ns.variant_notification_settings = CURRENT_DATE`
 
-	rows, err := conn.Query(query)
+	rows, err := conn.Query( context.Background(),query)
 	if err != nil {
 		return nil, fmt.Errorf("error querying stage notifications: %v", err)
 	}

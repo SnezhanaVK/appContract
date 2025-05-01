@@ -3,6 +3,7 @@ package db
 import (
 	db "appContract/pkg/db"
 	"appContract/pkg/models"
+	"context"
 	"database/sql"
 
 	//"encoding/json"
@@ -41,7 +42,7 @@ func Authorize(login string, password string) (*models.Users, error) {
     // Используем pq.Int32Array для обработки NULL
     var pgRoles pq.Int32Array
     
-    err := conn.QueryRow(query, login, password).Scan(
+    err := conn.QueryRow(context.Background(),query, login, password).Scan(
         &user.Id_user,
         &user.Email,
         &user.Login,
@@ -88,7 +89,7 @@ func GetAddmin(id int) (bool, error) {
 	}
 
 	var isAdmin sql.NullBool
-	err := conn.QueryRow(`SELECT admin FROM users WHERE id_user=$1`, id).Scan(&isAdmin)
+	err := conn.QueryRow( context.Background(),`SELECT admin FROM users WHERE id_user=$1`, id).Scan(&isAdmin)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return false, errors.New("user not found")
@@ -112,7 +113,7 @@ func ChangePassword(email string, password string) error {
 		return errors.New("connection error")
 	}
 
-	result, err := conn.Exec(
+	result, err := conn.Exec( context.Background(),
 		`UPDATE users SET password = $1 WHERE email = $2`,
 		password,
 		email,
@@ -138,7 +139,7 @@ func GetUser(email string) (models.Users, error) {
 
 	var user models.Users
 
-	err := conn.QueryRow(`SELECT id_user, email, login, password FROM users WHERE email = $1`, email).Scan(
+	err := conn.QueryRow( context.Background(),`SELECT id_user, email, login, password FROM users WHERE email = $1`, email).Scan(
 		&user.Id_user,
 		&user.Email,
 		&user.Login,
@@ -165,7 +166,7 @@ func GetUserByEmail(email string) (models.Users, error) {
 
 	var user models.Users
 
-	err := conn.QueryRow(`SELECT id_user, email, login, password FROM users WHERE email = $1`, email).Scan(
+	err := conn.QueryRow( context.Background(),`SELECT id_user, email, login, password FROM users WHERE email = $1`, email).Scan(
 		&user.Id_user,
 		&user.Email,
 		&user.Login,

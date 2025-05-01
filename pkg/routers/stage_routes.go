@@ -9,8 +9,9 @@ import (
 func StageRoutes(router *mux.Router) {
     // Этапы
     router.HandleFunc("/api/stages", handlers.GetAllStages).Methods("GET")
-    router.HandleFunc("/api/stages/{userID}", handlers.GetUserStages).Methods("GET")
-    router.HandleFunc("/api/stages/{stageID}", handlers.GetStage).Methods("GET")
+    router.HandleFunc("/api/stages/userID/{userID}", handlers.GetUserStages).Methods("GET")
+    router.HandleFunc("/api/stages/stageID/{stageID}", handlers.GetStage).Methods("GET")
+    router.HandleFunc("/api/stages/contractId/{contractID}", handlers.GetStagesByIdContract).Methods("GET")
     router.HandleFunc("/api/stages/{stageID}/files/{fileID}", handlers.GetStageFilesID).Methods("GET")
     router.HandleFunc("/api/stages/{stageID}/files", handlers.GetStageFiles).Methods("GET")
     router.HandleFunc("/api/stages/status/{statusID}", handlers.GetStageStatus).Methods("GET")

@@ -3,6 +3,7 @@ package db
 import (
 	"appContract/pkg/db"
 	"appContract/pkg/models"
+	"context"
 	"encoding/json"
 	"errors"
 )
@@ -14,7 +15,7 @@ func DBgetContractAll() ([]models.Contracts, error) {
         return nil, errors.New("connection error")
     }
 
-    rows, err := conn.Query(`
+    rows, err := conn.Query( context.Background(),`
         SELECT 
     c.id_contract,
     c.name_contract,
@@ -106,7 +107,7 @@ func DBgetContractByType(idType int) ([]models.Contracts, error) {
     }
 
     // Модифицированный SQL-запрос с агрегацией тегов
-    rows, err := conn.Query(`
+    rows, err := conn.Query( context.Background(),`
         SELECT 
             c.id_contract,
             c.name_contract,
@@ -195,7 +196,7 @@ func DBgetContractsByDateCreate(date models.Date) ([]models.Contracts, error) {
         return nil, errors.New("connection error")
     }
 
-    rows, err := conn.Query(`
+    rows, err := conn.Query( context.Background(),`
         SELECT 
             c.id_contract,
             c.name_contract,
@@ -284,7 +285,7 @@ func DBgetContractsByTegs() ([]models.Contracts, error) {
         return nil, errors.New("DB connection is nil")
     }
 
-    rows, err := conn.Query(`
+    rows, err := conn.Query( context.Background(),`
         SELECT 
             c.id_contract,
             c.name_contract,
@@ -374,7 +375,7 @@ func DBgetContractsByStatus() ([]models.Contracts, error) {
         return nil, errors.New("connection error")
     }
 
-    rows, err := conn.Query(`
+    rows, err := conn.Query( context.Background(),`
         SELECT 
             c.id_contract,
             c.name_contract,
@@ -463,7 +464,7 @@ func DBgetContractID(contractID int) ([]models.Contracts, error) {
     if conn==nil{
         return nil, errors.New("connection error")
     }
-    rows, err := conn.Query(`
+    rows, err := conn.Query( context.Background(),`
         SELECT 
             c.id_contract,
             c.name_contract,
@@ -625,7 +626,7 @@ func DBgetContractUserId(user_id int) ([]models.Contracts, error) {
             c.notes,
             c.conditions`
 
-    rows, err := conn.Query(query, user_id)
+    rows, err := conn.Query( context.Background(),query, user_id)
     if err != nil {
         return nil, err
     }
@@ -687,7 +688,7 @@ func DBaddContract(contract models.Contracts)error{
         return errors.New("connection error")
     }
 	var userExist bool
-    err := conn.QueryRow(`SELECT EXISTS(SELECT 1 FROM users WHERE id_user = $1)`, contract.Id_user).Scan(&userExist)
+    err := conn.QueryRow( context.Background(),`SELECT EXISTS(SELECT 1 FROM users WHERE id_user = $1)`, contract.Id_user).Scan(&userExist)
     if err != nil {
         return err
     }
@@ -695,7 +696,7 @@ func DBaddContract(contract models.Contracts)error{
         return errors.New("user not found")
     }
 
-	_,err=conn.Exec(`
+	_,err=conn.Exec( context.Background(),`
 	INSERT INTO contracts (
   name_contract,
   date_create_contract,
@@ -741,7 +742,7 @@ func DBchangeContract(contract models.Contracts) error{
         return errors.New("connection error")
     }
 
-	_, err:=conn.Exec(`
+	_, err:=conn.Exec( context.Background(),`
 	UPDATE  contracts SET
 		name_contract = $1,
 		date_create_contract = $2,
@@ -789,7 +790,7 @@ func DBchangeContractUser(id_contract int, id_user int) error {
     }
     
     var exists bool
-    err := conn.QueryRow(`SELECT EXISTS(SELECT 1 FROM users WHERE id_user = $1)`, id_user).Scan(&exists)
+    err := conn.QueryRow( context.Background(),`SELECT EXISTS(SELECT 1 FROM users WHERE id_user = $1)`, id_user).Scan(&exists)
     if err != nil {
         return err
     }
@@ -799,7 +800,7 @@ func DBchangeContractUser(id_contract int, id_user int) error {
 
    
     exists = false
-    err = conn.QueryRow(`SELECT EXISTS(SELECT 1 FROM contracts WHERE id_contract = $1)`, id_contract).Scan(&exists)
+    err = conn.QueryRow( context.Background(),`SELECT EXISTS(SELECT 1 FROM contracts WHERE id_contract = $1)`, id_contract).Scan(&exists)
     if err != nil {
         return err
     }
@@ -808,7 +809,7 @@ func DBchangeContractUser(id_contract int, id_user int) error {
     }
 
 
-    result, err := conn.Exec(`
+    result, err := conn.Exec( context.Background(),`
         UPDATE contracts
         SET id_user = $2
         WHERE id_contract = $1
@@ -832,7 +833,7 @@ func DBdeleteContract(contract_id int)error{
         return errors.New("connection error")
     }
 	
-	_,err:=conn.Exec(
+	_,err:=conn.Exec( context.Background(),
 		`
 		DELETE FROM contracts WHERE id_contract=$1`, contract_id)
 		if err!=nil{

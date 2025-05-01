@@ -8,11 +8,9 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
-var (
-	dbPool *pgxpool.Pool
-)
+
 func SetupDatabase() error {
-	connConfig,err := pgx.ParseConfig("host=localhost user=postgres password=1234 dbname=postgres port=5432 sslmode=disable")
+	connConfig, err := pgx.ParseConfig("postgres://postgres:1234@localhost:5432/postgres")
 
 	if err != nil {
 		return fmt.Errorf("Error parsing database connection string: %v", err)
@@ -276,13 +274,5 @@ fmt.Println("Table comments created successfully")
 	return nil
 }
 
-func GetDBConection() *pgxpool.Pool {
-	return dbPool
-}
 
-func CloseDB() {
-	if dbPool != nil {
-		dbPool.Close()
-	}
-}
 

@@ -60,56 +60,117 @@ func GetAllStages(w http.ResponseWriter, r *http.Request) {
     w.Write(data)
 }
 
-func GetUserStages(w http.ResponseWriter, r *http.Request) {
-    if r.Method != http.MethodGet{
-        http.Error(w,"Invalid request method GetUserStages",http.StatusBadRequest)
+func GetStagesByIdContract(w http.ResponseWriter, r *http.Request) {
+    if r.Method != http.MethodGet {
+        http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
         return
     }
-   vars:=mux.Vars(r)
-    userID:=vars["userID"]
-    if userID==""{
-        http.Error(w,"Invalid user_id",http.StatusBadRequest)
+
+    vars := mux.Vars(r)
+    contractID := vars["contractID"]
+    if contractID == "" {
+        http.Error(w, "Contract ID is required", http.StatusBadRequest)
         return
     }
-    id, err:=strconv.Atoi(userID)
+
+    id, err := strconv.Atoi(contractID)
     if err != nil {
-        http.Error(w, "Invalid user_id", http.StatusBadRequest)
+        http.Error(w, "Invalid contract ID format", http.StatusBadRequest)
         return
     }
+
+    stages, err := db.DBgetStageByContractID(id)
+    if err != nil {
+        log.Printf("Error getting stages: %v", err)
+        http.Error(w, "Internal server error", http.StatusInternalServerError)
+        return
+    }
+
+    // Подготовка ответа
+    response := make([]map[string]interface{}, 0, len(stages))
+    for _, stage := range stages {
+        response = append(response, map[string]interface{}{
+            "id_stage":            stage.Id_stage,
+            "name_stage":          stage.Name_stage,
+            "id_user":             stage.Id_user,
+            "surname":    stage.Surname,
+            "username":   stage.Username,
+            "patronymic":  stage.Patronymic,
+            "description":         stage.Description,
+            "id_status_stage":   stage.Id_status_stage,
+            "name_status_stage": stage.Name_status_stage,
+            "date_change_status": stage.Date_change_status,
+            "date_create_start":       stage.Date_create_start,
+            "date_create_end":         stage.Date_create_end,
+            "date_create_contract": stage.Data_contract_create,
+            "id_contract":         stage.Id_contract,
+            "name_contract":       stage.Name_contract,
+            
+        })
+    }
+
+    w.Header().Set("Content-Type", "application/json")
+    if err := json.NewEncoder(w).Encode(response); err != nil {
+        log.Printf("Error encoding response: %v", err)
+        http.Error(w, "Internal server error", http.StatusInternalServerError)
+    }
+}
+
+// handler.go - Обновленный обработчик
+func GetUserStages(w http.ResponseWriter, r *http.Request) {
+    if r.Method != http.MethodGet {
+        http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+        return
+    }
+
+    vars := mux.Vars(r)
+    userID := vars["userID"]
+    if userID == "" {
+        http.Error(w, "User ID is required", http.StatusBadRequest)
+        return
+    }
+
+    id, err := strconv.Atoi(userID)
+    if err != nil {
+        http.Error(w, "Invalid User ID format", http.StatusBadRequest)
+        return
+    }
+
     stages, err := db.DBgetStageUserID(id)
     if err != nil {
         http.Error(w, err.Error(), http.StatusInternalServerError)
         return
     }
-var stagesResponse []map[string]interface{}
 
+    // Создаем кастомный ответ только с нужными полями
+    var responses []map[string]interface{}
     for _, stage := range stages {
-
-        stageResponse := map[string]interface{}{
-            "id_stage": stage.Id_stage,
-            "name_stage": stage.Name_stage,
-            "id_user": stage.Id_user,
-            "description": stage.Description,
-            "id_status_stage": stage.Id_status_stage,
-            "name_status_stage": stage.Name_status_stage,
+        response :=  map[string]interface{}{
+            "id_stage":          stage.Id_stage,
+            "name_stage":        stage.Name_stage,
+            "description":       stage.Description,
             "date_create_start": stage.Date_create_start,
-            "date_create_end": stage.Date_create_end,
-            "id_contract": stage.Id_contract,
-            "name_contract": stage.Name_contract,
-            "date_create_contract": stage.Data_contract_create,
+            "date_create_end":   stage.Date_create_end,
+            "name_contract":     stage.Name_contract,
+            "name_status_stage": stage.Name_status_stage,
+            "surname":           stage.Surname,
+            "username":          stage.Username,
+            "patronymic":        stage.Patronymic,
         }
-        stagesResponse = append(stagesResponse, stageResponse)
-}
+        responses=append(responses, response)
 
-    data, ererr := json.Marshal(stagesResponse)
-    if ererr != nil {
-        http.Error(w, ererr.Error(), http.StatusInternalServerError)
+    }
+    data, err:=json.Marshal(responses)
+    if err != nil {
+        http.Error(w, err.Error(), http.StatusInternalServerError)
         return
     }
 
+    w.Header().Set("Content-Type", "application/json")
     w.WriteHeader(http.StatusOK)
     w.Write(data)
-
+    
+   
 }
 
 func GetStage(w http.ResponseWriter, r *http.Request) {
@@ -263,8 +324,6 @@ func GetStageFilesID(w http.ResponseWriter, r *http.Request) {
     w.WriteHeader(http.StatusOK)
     w.Write(data)
 }
-
-
 func GetStageStatus(w http.ResponseWriter, r *http.Request) {
     if r.Method != http.MethodGet {
         http.Error(w, "Invalid request method GetStageStatus", http.StatusBadRequest)
@@ -303,8 +362,6 @@ func GetStageStatus(w http.ResponseWriter, r *http.Request) {
     w.WriteHeader(http.StatusOK)
     w.Write(data)
     }
-   
-
 
 func GetComments(w http.ResponseWriter, r *http.Request) {
     if r.Method != http.MethodGet {
@@ -459,9 +516,6 @@ var comment models.Stages
     json.NewEncoder(w).Encode(map[string]string{"message": "Comment created successfully"})
 }
 
-
-
-
 func PutStageStatus(w http.ResponseWriter, r *http.Request) {
     if r.Method != http.MethodPut {
         http.Error(w, "Invalid request body PutStageStatus", http.StatusBadRequest)
@@ -489,9 +543,6 @@ func PutStageStatus(w http.ResponseWriter, r *http.Request) {
     json.NewEncoder(w).Encode(map[string]string{"message": "Stage status updated successfully"})
 }
 
-
-
-
 func DeleteStageFiles(w http.ResponseWriter, r *http.Request) {
     if r.Method != http.MethodDelete {
         http.Error(w, "Invalid request method DeleteStageFiles", http.StatusBadRequest)
@@ -512,7 +563,6 @@ func DeleteStageFiles(w http.ResponseWriter, r *http.Request) {
     json.NewEncoder(w).Encode(map[string]string{"message": "File deleted successfully"})
 
 }
-
 func DeleteStage(w http.ResponseWriter, r *http.Request) {
     if r.Method != http.MethodDelete {
         http.Error(w, "Invalid request method DeleteStage", http.StatusBadRequest)

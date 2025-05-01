@@ -54,6 +54,7 @@ func main() {
 
     go func() {
         log.Println("http://localhost:8080")
+        log.Println("Monitoring: "+"http://localhost:8080/metrics")
         if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
             log.Fatalf("Server error: %v", err)    
         }

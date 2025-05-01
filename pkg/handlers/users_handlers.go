@@ -3,7 +3,6 @@ package handlers
 import (
 	db "appContract/pkg/db/repository"
 	"appContract/pkg/models"
-	servis "appContract/pkg/service"
 
 	"encoding/json"
 	"net/http"
@@ -140,29 +139,140 @@ func PostCreateUser(w http.ResponseWriter, r *http.Request) {
     json.NewEncoder(w).Encode(map[string]string{"message": "User created successfully"})
 }
 
-func PostAddUserRole(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Invalid request method PostAddUserRole", http.StatusBadRequest)
-		return
-	}
-	var user models.Users
+// func PostAddUserRole(w http.ResponseWriter, r *http.Request) {
+// 	if r.Method != http.MethodPost {
+// 		http.Error(w, "Invalid request method PostAddUserRole", http.StatusBadRequest)
+// 		return
+// 	}
+// 	var user models.Users
 
-	err := json.NewDecoder(r.Body).Decode(&user)
-	if err != nil {
-		http.Error(w, "Invalid request body PostAddUserRole", http.StatusBadRequest)
-		return
-	}
-	err = servis.AddRole(user.Id_user, user.Id_role)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]string{"message": "User role added successfully"})
+// 	err := json.NewDecoder(r.Body).Decode(&user)
+// 	if err != nil {
+// 		http.Error(w, "Invalid request body PostAddUserRole", http.StatusBadRequest)
+// 		return
+// 	}
+// 	err = servis.AddRole(user.Id_user, user.Id_role)
+// 	if err != nil {
+// 		http.Error(w, err.Error(), http.StatusInternalServerError)
+// 		return
+// 	}
+// 	w.WriteHeader(http.StatusCreated)
+// 	json.NewEncoder(w).Encode(map[string]string{"message": "User role added successfully"})
+// }
+func PostAddRoleAdmin(w http.ResponseWriter, r *http.Request) {
+    if r.Method != http.MethodPost {
+        http.Error(w, "Invalid request method PostAddRoleAdmin", http.StatusBadRequest)
+        return
+    }
+    var user models.Users
+    vars := mux.Vars(r)
+    userId := vars["userID"]
+    if userId == "" {
+        http.Error(w, "Invalid user_id", http.StatusBadRequest)
+        return
+    }
+    id, err := strconv.Atoi(userId)
+    if err != nil {
+        http.Error(w, "Invalid user_id", http.StatusBadRequest)
+        return
+    }
+    user.Id_user = id
+
+    err = db.DBaddUserAdmin(user)
+    if err != nil {
+        http.Error(w, err.Error(), http.StatusInternalServerError)
+        return
+    }
+    w.WriteHeader(http.StatusCreated)
+    json.NewEncoder(w).Encode(map[string]string{"message": "User role added successfully"})
 }
 
+func PostAddRoleManager(w http.ResponseWriter, r *http.Request) {
+    if r.Method != http.MethodPost {
+        http.Error(w, "Invalid request method PostAddRoleMeneger", http.StatusBadRequest)
+        return
+    }
+    var user models.Users
+    vars := mux.Vars(r)
+    userId := vars["userID"]
+    if userId == "" {
+        http.Error(w, "Invalid user_id", http.StatusBadRequest)
+        return
+    }
+    id, err := strconv.Atoi(userId)
+    if err != nil {
+        http.Error(w, "Invalid user_id", http.StatusBadRequest)
+        return
+    }
+    user.Id_user = id
 
-func PutUpdateUser(w http.ResponseWriter, r *http.Request) {//нужно додлать до рабочего состояния
+    err = db.DBaddUserMeneger(user)
+    if err != nil {
+        http.Error(w, err.Error(), http.StatusInternalServerError)
+        return
+    }
+    w.WriteHeader(http.StatusCreated)
+    json.NewEncoder(w).Encode(map[string]string{"message": "User role added successfully"})
+}
+
+func DeleteRemoveRoleAdmin(w http.ResponseWriter, r *http.Request) {
+    if r.Method != http.MethodDelete {
+        http.Error(w, "Invalid request method DeleteRemoveRoleAdmin", http.StatusBadRequest)
+        return
+    }
+    var user models.Users
+    vars := mux.Vars(r)
+    userId := vars["userID"]
+    if userId == "" {
+        http.Error(w, "Invalid user_id", http.StatusBadRequest)
+        return
+    }
+    id, err := strconv.Atoi(userId)
+    if err != nil {
+        http.Error(w, "Invalid user_id", http.StatusBadRequest)
+        return
+    }
+    user.Id_user = id
+
+    err = db.DBRemoveUserRole(user, 1) // 1 - ID роли администратора
+    if err != nil {
+        http.Error(w, err.Error(), http.StatusInternalServerError)
+        return
+    }
+    w.WriteHeader(http.StatusCreated)
+    json.NewEncoder(w).Encode(map[string]string{"message": "User role removed successfully"})
+}
+
+func DeleteRemoveRoleManager(w http.ResponseWriter, r *http.Request) {
+    if r.Method != http.MethodDelete {
+        http.Error(w, "Invalid request method DeleteRemoveRoleMeneger", http.StatusBadRequest)
+        return
+    }
+    var user models.Users
+    vars := mux.Vars(r)
+    userId := vars["userID"]
+    if userId == "" {
+        http.Error(w, "Invalid user_id", http.StatusBadRequest)
+        return
+    }
+    id, err := strconv.Atoi(userId)
+    if err != nil {
+        http.Error(w, "Invalid user_id", http.StatusBadRequest)
+        return
+    }
+    user.Id_user = id
+
+    err = db.DBRemoveUserRole(user, 2) // 2 - ID роли менеджера
+    if err != nil {
+        http.Error(w, err.Error(), http.StatusInternalServerError)
+        return
+    }
+    w.WriteHeader(http.StatusCreated)
+    json.NewEncoder(w).Encode(map[string]string{"message": "User role removed successfully"})
+}
+
+//нужно додлать до рабочего состояния
+func PutUpdateUser(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPut {
 		http.Error(w, "Invalid request method PutUpdateUser", http.StatusBadRequest)
 		return
@@ -181,8 +291,8 @@ func PutUpdateUser(w http.ResponseWriter, r *http.Request) {//нужно дод�
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"message": "User updated successfully"})
 }
-
-func DeleteUser(w http.ResponseWriter, r *http.Request) {//нужно додлать до рабочего состояния
+//нужно додлать до рабочего состояния
+func DeleteUser(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodDelete {
 		http.Error(w, "Invalid request method DeleteUser", http.StatusBadRequest)
 		return

@@ -3,6 +3,8 @@ package db
 import (
 	"appContract/pkg/db"
 	"appContract/pkg/models"
+	"context"
+
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -15,7 +17,7 @@ func DBgetUserAll() ([]models.Users, error) {
         return nil, errors.New("connection error")
     }
 
-    rows, err := conn.Query(`SELECT 
+    rows, err := conn.Query( context.Background(),`SELECT 
         u.id_user, 
         u.surname, 
         u.username, 
@@ -83,7 +85,7 @@ func DBgetUserID(user_id int) ([]models.Users, error) {
         return nil, errors.New("connection error")
     }
 
-    rows, err := conn.Query(`
+    rows, err := conn.Query( context.Background(),`
         SELECT 
             u.id_user,
             u.surname,
@@ -141,7 +143,7 @@ func DBaddUser(user models.Users) error{
 		return errors.New("connection error")
 	}
 
-	_,err :=conn.Exec(`
+	_,err :=conn.Exec( context.Background(),`
 	INSERT INTO users (
 	surname, 
 	username, 
@@ -172,74 +174,132 @@ if err!=nil{
 return nil
 
 }
-func DBaddUserAdmin(user models.Users) error{
-	conn:= db.GetDB()
-	if conn==nil{
-		return errors.New("connection error")
-	}
+func DBAddUserRole(user models.Users, roleID int) error {
+    conn := db.GetDB()
+    if conn == nil {
+        return errors.New("connection error")
+    }
 
-	_,err :=conn.Exec(`
+    // Определяем название роли для сообщений об ошибках
+    var roleName string
+    switch roleID {
+    case 1:
+        roleName = "admin"
+    case 2:
+        roleName = "manager"
+    default:
+        return fmt.Errorf("unknown role ID: %d", roleID)
+    }
+
+    // Проверяем, есть ли уже такая роль у пользователя
+    var exists bool
+    err := conn.QueryRow( context.Background(),`
+        SELECT EXISTS(
+            SELECT 1 FROM user_by_role 
+            WHERE id_user = $1 AND id_role = $2
+        )
+    `, user.Id_user, roleID).Scan(&exists)
+    
+    if err != nil {
+        log.Printf("Error checking existing %s role: %v", roleName, err)
+        return fmt.Errorf("failed to check %s role: %v", roleName, err)
+    }
+
+    if exists {
+        return fmt.Errorf("user already has %s role (id_role=%d)", roleName, roleID)
+    }
+
+    // Если роли нет, добавляем
+    _, err = conn.Exec( context.Background(),`
         INSERT INTO user_by_role (
             id_user,
             id_role
         ) VALUES (
             $1,
-            1
+            $2
         )
-    `, 
-        user.Id_user,
-    )
+    `, user.Id_user, roleID)
+    
     if err != nil {
-        log.Fatal(err)
+        log.Printf("Error adding %s role: %v", roleName, err)
+        return fmt.Errorf("failed to add %s role: %v", roleName, err)
     }
 
     return nil
 }
-func DBaddUserMeneger(user models.Users) error{
-	conn:= db.GetDB()
-	if conn==nil{
-		return errors.New("connection error")
-	}
 
-	_,err :=conn.Exec(`
-        INSERT INTO user_by_role (
-            id_user,
-            id_role
-        ) VALUES (
-            $1,
-            2
-        )
-    `, 
+// Тогда оригинальные функции можно переписать так:
+func DBaddUserAdmin(user models.Users) error {
+    return DBAddUserRole(user, 1)
+}
+
+func DBaddUserMeneger(user models.Users) error {
+    return DBAddUserRole(user, 2)
+}
+
+func DBRemoveUserRole(user models.Users, roleID int) error {
+    conn := db.GetDB()
+    if conn == nil {
+        return errors.New("connection error")
+    }
+
+    // Определяем название роли для сообщений об ошибках
+    var roleName string
+    switch roleID {
+    case 1:
+        roleName = "admin"
+    case 2:
+        roleName = "manager"
+    default:
+        return fmt.Errorf("unknown role ID: %d", roleID)
+    }
+
+    // Проверяем, есть ли указанная роль у пользователя
+    var exists bool
+    err := conn.QueryRow( context.Background(),`
+        SELECT EXISTS(
+            SELECT 1 FROM user_by_role 
+            WHERE id_user = $1 AND id_role = $2
+        )`,
         user.Id_user,
-    )
+        roleID,
+    ).Scan(&exists)
+    
     if err != nil {
-        log.Fatal(err)
+        log.Printf("Error checking %s role existence: %v", roleName, err)
+        return fmt.Errorf("failed to check %s role: %v", roleName, err)
+    }
+
+    if !exists {
+        return fmt.Errorf("user doesn't have %s role (id_role=%d)", roleName, roleID)
+    }
+
+    // Удаляем указанную роль
+    tag, err := conn.Exec( context.Background(),`
+        DELETE FROM user_by_role
+        WHERE id_user = $1 AND id_role = $2`,
+        user.Id_user,
+        roleID,
+    )
+    
+    if err != nil {
+        log.Printf("Error removing %s role: %v", roleName, err)
+        return fmt.Errorf("failed to remove %s role: %v", roleName, err)
+    }
+
+    // Проверяем, была ли действительно удалена запись
+    if tag.RowsAffected() == 0 {
+        return fmt.Errorf("no %s role was removed (id_user=%d)", roleName, user.Id_user)
     }
 
     return nil
 }
-func DBaddUserUser(user models.Users) error{
-	conn:= db.GetDB()
-	if conn==nil{
-		return errors.New("connection error")
-	}
+func DBRemoveUserAdmin(user models.Users) error {
+    return DBRemoveUserRole(user, 1)
+}
 
-	_,err :=conn.Exec(`
-        INSERT INTO user_by_role (
-            id_user,
-            id_role
-        ) VALUES (
-            $1,
-            3
-        )
-    `, 
-        user.Id_user,
-    )
-    if err != nil {
-        log.Fatal(err)
-    }
-
-    return nil
+func DBRemoveUserMeneger(user models.Users) error {
+    return DBRemoveUserRole(user, 2)
 }
 
 
@@ -249,7 +309,7 @@ func DBchangeUser(user models.Users) error{
 		return errors.New("connection error")
 	}
 
-	_,err :=conn.Exec(`
+	_,err :=conn.Exec( context.Background(),`
 	UPDATE users SET 
 	surname=$1,
 	username=$2,
@@ -284,7 +344,7 @@ func DBdeleteUser(user_id int) error{
 		return errors.New("connection error")
 	}
 
-	_,err :=conn.Exec(`
+	_,err :=conn.Exec( context.Background(),`
 	DELETE FROM users WHERE id_user=$1`, user_id)
 if err!=nil{
 	log.Fatal(err)	
