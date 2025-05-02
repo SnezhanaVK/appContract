@@ -33,40 +33,39 @@ func SetupDatabase() error {
 			return fmt.Errorf("Error creating database: %v", err)
 		}
 		fmt.Println("Database created successfully")
-		connConfig.Database= "contract_db"
-	conn, err = pgx.ConnectConfig(context.Background(), connConfig)
-	if err != nil {
-		return fmt.Errorf("Error connecting to database: %v", err)
-	}
-	
-	defer conn.Close(context.Background())
-	tx, err := conn.Begin(context.Background())
-	if err != nil {
-		return fmt.Errorf("Error starting transaction: %v", err)
-	}
-	defer tx.Rollback(context.Background())
-	
+		connConfig.Database = "contract_db"
+		conn, err = pgx.ConnectConfig(context.Background(), connConfig)
+		if err != nil {
+			return fmt.Errorf("Error connecting to database: %v", err)
+		}
+
+		defer conn.Close(context.Background())
+		tx, err := conn.Begin(context.Background())
+		if err != nil {
+			return fmt.Errorf("Error starting transaction: %v", err)
+		}
+		defer tx.Rollback(context.Background())
+
 		_, err = tx.Exec(context.Background(),
-	   `CREATE TABLE IF NOT EXISTS roles (
+			`CREATE TABLE IF NOT EXISTS roles (
 		id_role SERIAL PRIMARY KEY,
 		name_role VARCHAR(255) NOT NULL
 		)`)
-	if err != nil {
-	return fmt.Errorf("Error roles creating table: %v", err)
-	}
-	fmt.Println("Table roles created successfully")
-	
+		if err != nil {
+			return fmt.Errorf("Error roles creating table: %v", err)
+		}
+		fmt.Println("Table roles created successfully")
 
-	_, err = tx.Exec(context.Background(),`CREATE TABLE IF NOT EXISTS notification_settings (
+		_, err = tx.Exec(context.Background(), `CREATE TABLE IF NOT EXISTS notification_settings (
 		id_notification_settings SERIAL PRIMARY KEY,
 		variant_notification_settings INT NOT NULL
 	)`)
-	if err != nil {
-		return fmt.Errorf("Error notification_settings creating table: %v", err)
-	}
-	fmt.Println("Table notifications created successfully")
+		if err != nil {
+			return fmt.Errorf("Error notification_settings creating table: %v", err)
+		}
+		fmt.Println("Table notifications created successfully")
 
-	_, err = tx.Exec(context.Background(),`CREATE TABLE if not exists users (
+		_, err = tx.Exec(context.Background(), `CREATE TABLE if not exists users (
 		id_user SERIAL PRIMARY KEY,
 		surname VARCHAR(255) NOT NULL,
 		username VARCHAR(255) NOT NULL,
@@ -78,43 +77,43 @@ func SetupDatabase() error {
 		password VARCHAR(255) NOT NULL
 
 	)`)
-	if err != nil {
-		log.Fatal("Error users creating table : ", err)
-	}
-	fmt.Println("Table users created successfully")
-	_, err = tx.Exec(context.Background(),`CREATE TABLE if not exists user_by_role (
+		if err != nil {
+			log.Fatal("Error users creating table : ", err)
+		}
+		fmt.Println("Table users created successfully")
+		_, err = tx.Exec(context.Background(), `CREATE TABLE if not exists user_by_role (
 		user_by_role SERIAL PRIMARY KEY,
 		id_user int NOT NULL,
 		id_role int NOT NULL,
 		CONSTRAINT fk_role_id FOREIGN KEY (id_role) REFERENCES roles(id_role),
 		CONSTRAINT fk_user_id FOREIGN KEY (id_user) REFERENCES users(id_user)
 	)`)
-	if err != nil {
-		log.Fatal("Error user_by_role creating table : ", err)
-	}
-	fmt.Println("Table user_by_role created successfully")
+		if err != nil {
+			log.Fatal("Error user_by_role creating table : ", err)
+		}
+		fmt.Println("Table user_by_role created successfully")
 
-	_, err = tx.Exec(context.Background(),`CREATE TABLE if not exists types_contracts (
+		_, err = tx.Exec(context.Background(), `CREATE TABLE if not exists types_contracts (
 		id_type_contract SERIAL PRIMARY KEY,
 		name_type_contract VARCHAR(255) NOT NULL
 
 	)`)
-	if err != nil {
-		log.Fatal("Error types_contracts creating table : ", err)
-	}
-	fmt.Println("Table types_contracts created successfully")
+		if err != nil {
+			log.Fatal("Error types_contracts creating table : ", err)
+		}
+		fmt.Println("Table types_contracts created successfully")
 
-	_, err = tx.Exec(context.Background(),`CREATE TABLE if not exists status_contracts (
+		_, err = tx.Exec(context.Background(), `CREATE TABLE if not exists status_contracts (
 		id_status_contract SERIAL PRIMARY KEY,
 		name_status_contract VARCHAR(255) NOT NULL
 		
 	)`)
-	if err != nil {
-		log.Fatal("Error status_contracts creating table : ", err)
-	}
-	fmt.Println("Table status_contracts created successfully")
+		if err != nil {
+			log.Fatal("Error status_contracts creating table : ", err)
+		}
+		fmt.Println("Table status_contracts created successfully")
 
-	_, err = tx.Exec(context.Background(),`CREATE TABLE if not exists counterparty (
+		_, err = tx.Exec(context.Background(), `CREATE TABLE if not exists counterparty (
 		id_counterparty SERIAL PRIMARY KEY,
 		name_counterparty VARCHAR(255) NOT NULL,
 		contact VARCHAR(255) NOT NULL,
@@ -123,32 +122,32 @@ func SetupDatabase() error {
 		address VARCHAR(255) NOT NULL,
 		dop_info VARCHAR(255) NOT NULL
 	)`)
-	if err != nil {
-		log.Fatal("Error counterparty creating table : ", err)
-	}
-	fmt.Println("Table counterparty created successfully")
+		if err != nil {
+			log.Fatal("Error counterparty creating table : ", err)
+		}
+		fmt.Println("Table counterparty created successfully")
 
-	_, err = tx.Exec(context.Background(),`CREATE TABLE if not exists tegs (
+		_, err = tx.Exec(context.Background(), `CREATE TABLE if not exists tegs (
 		id_teg SERIAL PRIMARY KEY,
 		name_teg VARCHAR(255) NOT NULL
 		
 	)`)
-	if err != nil {
-		log.Fatal("Error tegs creating table : ", err)
-	}
-	fmt.Println("Table tegs created successfully")
+		if err != nil {
+			log.Fatal("Error tegs creating table : ", err)
+		}
+		fmt.Println("Table tegs created successfully")
 
-	_, err = tx.Exec(context.Background(),`CREATE TABLE if not exists status_stages (
+		_, err = tx.Exec(context.Background(), `CREATE TABLE if not exists status_stages (
 		id_status_stage SERIAL PRIMARY KEY,
 		name_status_stage VARCHAR(255) NOT NULL
 		
 	)`)
-	if err != nil {
-		log.Fatal("Error status_stages creating table : ", err)
-	}
-	fmt.Println("Table status_stages created successfully")
+		if err != nil {
+			log.Fatal("Error status_stages creating table : ", err)
+		}
+		fmt.Println("Table status_stages created successfully")
 
-	_, err = tx.Exec(context.Background(),`CREATE TABLE IF NOT EXISTS contracts (
+		_, err = tx.Exec(context.Background(), `CREATE TABLE IF NOT EXISTS contracts (
 		id_contract SERIAL PRIMARY KEY,
 		name_contract VARCHAR(255) NOT NULL,
 		date_create_contract date NOT NULL,
@@ -168,11 +167,11 @@ func SetupDatabase() error {
 		CONSTRAINT id_counterparty FOREIGN KEY (id_counterparty) REFERENCES counterparty(id_counterparty),
 		CONSTRAINT id_status_contract FOREIGN KEY (id_status_contract) REFERENCES status_contracts(id_status_contract)
 	)`)
-	if err != nil {
-		log.Fatal("Error contracts creating table : ", err)
-	}
-	fmt.Println("Table contracts created successfully")
-	_,err=tx.Exec(context.Background(),`
+		if err != nil {
+			log.Fatal("Error contracts creating table : ", err)
+		}
+		fmt.Println("Table contracts created successfully")
+		_, err = tx.Exec(context.Background(), `
 	CREATE TABLE if not exists notification_settings_by_user (
 	id_notification_settings_by_user SERIAL PRIMARY KEY,
     id_user int NOT NULL,
@@ -181,13 +180,12 @@ func SetupDatabase() error {
 CONSTRAINT fk_notification_settings FOREIGN KEY (id_notification_settings) REFERENCES notification_settings(id_notification_settings)
 );`)
 
-if err != nil {
-	log.Fatal("Error notification_settings_by_user creating table : ", err)
-}
-fmt.Println("Table notification_settings_by_user created successfully")
+		if err != nil {
+			log.Fatal("Error notification_settings_by_user creating table : ", err)
+		}
+		fmt.Println("Table notification_settings_by_user created successfully")
 
-
-_, err = tx.Exec(context.Background(),`CREATE TABLE if not exists stages (
+		_, err = tx.Exec(context.Background(), `CREATE TABLE if not exists stages (
     id_stage SERIAL PRIMARY KEY,
     name_stage VARCHAR(255) NOT NULL,
     id_user int NOT NULL,
@@ -198,12 +196,12 @@ _, err = tx.Exec(context.Background(),`CREATE TABLE if not exists stages (
     CONSTRAINT id_user FOREIGN KEY (id_user) REFERENCES users(id_user),
     CONSTRAINT id_contract FOREIGN KEY (id_contract) REFERENCES contracts(id_contract) 
 )`)
-if err != nil {
-    log.Fatal("Error stages creating table : ", err)
-}
-fmt.Println("Table stages created successfully")
+		if err != nil {
+			log.Fatal("Error stages creating table : ", err)
+		}
+		fmt.Println("Table stages created successfully")
 
-_, err = tx.Exec(context.Background(),`CREATE TABLE if not exists history_status (
+		_, err = tx.Exec(context.Background(), `CREATE TABLE if not exists history_status (
     id_history_status SERIAL PRIMARY KEY,
     id_stage int NOT NULL,
     id_status_stage int NOT NULL,
@@ -211,25 +209,24 @@ _, err = tx.Exec(context.Background(),`CREATE TABLE if not exists history_status
     CONSTRAINT id_stage FOREIGN KEY (id_stage) REFERENCES stages(id_stage),
     CONSTRAINT id_status_stage FOREIGN KEY (id_status_stage) REFERENCES status_stages(id_status_stage) 
 )`)
-if err != nil {
-    log.Fatal("Error history_states creating table : ", err)
-}
-fmt.Println("Table history_states created successfully")
+		if err != nil {
+			log.Fatal("Error history_states creating table : ", err)
+		}
+		fmt.Println("Table history_states created successfully")
 
-_, err = tx.Exec(context.Background(),`CREATE TABLE IF NOT EXISTS comments (
+		_, err = tx.Exec(context.Background(), `CREATE TABLE IF NOT EXISTS comments (
     id_comment SERIAL PRIMARY KEY,
     id_history_status int NOT NULL,
     comment VARCHAR(1000) NOT NULL,
     date_create_comment date NOT NULL,
  CONSTRAINT id_history_status FOREIGN KEY (id_history_status) REFERENCES history_status(id_history_status)
 )`)
-if err != nil {
-    log.Fatal("Error comments creating table : ", err)
-}
-fmt.Println("Table comments created successfully")
+		if err != nil {
+			log.Fatal("Error comments creating table : ", err)
+		}
+		fmt.Println("Table comments created successfully")
 
-
-	_, err = tx.Exec(context.Background(),`CREATE TABLE if not exists files (
+		_, err = tx.Exec(context.Background(), `CREATE TABLE if not exists files (
     id_file SERIAL PRIMARY KEY,
     name_file VARCHAR(255) NOT NULL,
     data bytea NOT NULL,
@@ -237,27 +234,29 @@ fmt.Println("Table comments created successfully")
     id_stage int NOT NULL,
     CONSTRAINT id_stage FOREIGN KEY (id_stage) REFERENCES stages(id_stage) ON DELETE CASCADE
 )`)
-	
-	if err != nil {
-		log.Fatal("Error files creating table : ", err)
-	}
-	fmt.Println("Table files created successfully")
 
-	_, err = tx.Exec(context.Background(),`CREATE TABLE if not exists contracts_by_tegs (
-		id_contract_by_teg SERIAL PRIMARY KEY,
-		id_contract int NOT NULL,
-		id_teg int NOT NULL,
-		CONSTRAINT id_contract FOREIGN KEY (id_contract) REFERENCES contracts(id_contract),
-		CONSTRAINT id_teg FOREIGN KEY (id_teg) REFERENCES tegs(id_teg)
+		if err != nil {
+			log.Fatal("Error files creating table : ", err)
+		}
+		fmt.Println("Table files created successfully")
+
+		_, err = tx.Exec(context.Background(), `CREATE TABLE IF NOT EXISTS contracts_by_tegs (
+    id_contract_by_teg SERIAL PRIMARY KEY,
+    id_contract int NOT NULL,
+    id_teg int NOT NULL,
+    CONSTRAINT id_contract FOREIGN KEY (id_contract) REFERENCES contracts(id_contract),
+    CONSTRAINT id_teg FOREIGN KEY (id_teg) REFERENCES tegs(id_teg),
+    CONSTRAINT unique_contract_tag UNIQUE (id_contract, id_teg)
+
 	)`)
-	if err != nil {
-		log.Fatal("Error contracts_by_tegs creating table : ", err)
-	}
-	fmt.Println("Table contracts_by_tegs created successfully")
-	if err := tx.Commit(context.Background()); err != nil {
-		return fmt.Errorf("error committing transaction: %v", err)
-	}
-		
+		if err != nil {
+			log.Fatal("Error contracts_by_tegs creating table : ", err)
+		}
+		fmt.Println("Table contracts_by_tegs created successfully")
+		if err := tx.Commit(context.Background()); err != nil {
+			return fmt.Errorf("error committing transaction: %v", err)
+		}
+
 	}
 
 	// Инициализируем пул соединений
@@ -273,6 +272,3 @@ fmt.Println("Table comments created successfully")
 
 	return nil
 }
-
-
-
