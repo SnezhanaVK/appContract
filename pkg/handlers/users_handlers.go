@@ -11,7 +11,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// Users
+
 func GetAllUsers(w http.ResponseWriter, r *http.Request) {
     if r.Method != http.MethodGet {
         http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
@@ -284,7 +284,7 @@ func GetUserRoles(w http.ResponseWriter, r *http.Request) {
     }
 }
 
-//нужно додлать до рабочего состояния
+
 func PutUpdateUser(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPut {
 		http.Error(w, "Invalid request method PutUpdateUser", http.StatusBadRequest)
@@ -304,7 +304,7 @@ func PutUpdateUser(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"message": "User updated successfully"})
 }
-//нужно додлать до рабочего состояния
+
 func DeleteUser(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodDelete {
 		http.Error(w, "Invalid request method DeleteUser", http.StatusBadRequest)
@@ -328,4 +328,4 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"message": "User deleted successfully"})
 
 }
-//нужно добавить удаление роли у пользовтаеля
+

@@ -12,12 +12,12 @@ import (
 )
 
 func DBgetUserAll() ([]models.Users, error) {
-    conn := db.GetDB()
-    if conn == nil {
-        return nil, errors.New("connection error")
-    }
+	conn := db.GetDB()
+	if conn == nil {
+		return nil, errors.New("connection error")
+	}
 
-    rows, err := conn.Query( context.Background(),`SELECT 
+	rows, err := conn.Query(context.Background(), `SELECT 
         u.id_user, 
         u.surname, 
         u.username, 
@@ -34,58 +34,58 @@ func DBgetUserAll() ([]models.Users, error) {
     INNER JOIN 
         roles r ON ubr.id_role = r.id_role
     ORDER BY u.id_user`)
-    if err != nil {
-        return nil, fmt.Errorf("query error: %v", err)
-    }
-    defer rows.Close()
+	if err != nil {
+		return nil, fmt.Errorf("query error: %v", err)
+	}
+	defer rows.Close()
 
-    usersMap := make(map[int]*models.Users)
-    for rows.Next() {
-        var user models.Users
-        var role models.Role
-        
-        err := rows.Scan(
-            &user.Id_user,
-            &user.Surname,
-            &user.Username,
-            &user.Patronymic,
-            &user.Phone,
-            &user.Photo,
-            &user.Email,
-            &role.Id_role,
-            &role.Name_role,
-        )
-        if err != nil {
-            return nil, fmt.Errorf("scan error: %v", err)
-        }
+	usersMap := make(map[int]*models.Users)
+	for rows.Next() {
+		var user models.Users
+		var role models.Role
 
-        // Если пользователь уже есть в мапе, добавляем только роль
-        if existingUser, exists := usersMap[user.Id_user]; exists {
-            existingUser.Roles = append(existingUser.Roles, role)
-            continue
-        }
+		err := rows.Scan(
+			&user.Id_user,
+			&user.Surname,
+			&user.Username,
+			&user.Patronymic,
+			&user.Phone,
+			&user.Photo,
+			&user.Email,
+			&role.Id_role,
+			&role.Name_role,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan error: %v", err)
+		}
 
-        // Если пользователя нет в мапе, создаем новую запись
-        user.Roles = []models.Role{role}
-        usersMap[user.Id_user] = &user
-    }
+		// Если пользователь уже есть в мапе, добавляем только роль
+		if existingUser, exists := usersMap[user.Id_user]; exists {
+			existingUser.Roles = append(existingUser.Roles, role)
+			continue
+		}
 
-    // Преобразуем map в слайс
-    var users []models.Users
-    for _, u := range usersMap {
-        users = append(users, *u)
-    }
+		// Если пользователя нет в мапе, создаем новую запись
+		user.Roles = []models.Role{role}
+		usersMap[user.Id_user] = &user
+	}
 
-    return users, nil
+	// Преобразуем map в слайс
+	var users []models.Users
+	for _, u := range usersMap {
+		users = append(users, *u)
+	}
+
+	return users, nil
 }
 
 func DBgetUserID(user_id int) ([]models.Users, error) {
-    conn := db.GetDB()
-    if conn == nil {
-        return nil, errors.New("connection error")
-    }
+	conn := db.GetDB()
+	if conn == nil {
+		return nil, errors.New("connection error")
+	}
 
-    rows, err := conn.Query( context.Background(),`
+	rows, err := conn.Query(context.Background(), `
         SELECT 
             u.id_user,
             u.surname,
@@ -102,48 +102,48 @@ func DBgetUserID(user_id int) ([]models.Users, error) {
         WHERE u.id_user = $1
         GROUP BY u.id_user
     `, user_id)
-    if err != nil {
-        return nil, err
-    }
-    defer rows.Close()
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
 
-    var users []models.Users
-    for rows.Next() {
-        var user models.Users
-        var rolesJSON []byte
-        
-        err = rows.Scan(
-            &user.Id_user,
-            &user.Surname,
-            &user.Username,
-            &user.Patronymic,
-            &user.Phone,
-            &user.Photo,
-            &user.Email,
-            &user.Login,
-            &rolesJSON,
-        )
-        if err != nil {
-            return nil, err
-        }
-        
-        // Декодируем JSON с ролями
-        if err := json.Unmarshal(rolesJSON, &user.Roles); err != nil {
-            return nil, err
-        }
-        
-        users = append(users, user)
-    }
-    return users, nil
+	var users []models.Users
+	for rows.Next() {
+		var user models.Users
+		var rolesJSON []byte
+
+		err = rows.Scan(
+			&user.Id_user,
+			&user.Surname,
+			&user.Username,
+			&user.Patronymic,
+			&user.Phone,
+			&user.Photo,
+			&user.Email,
+			&user.Login,
+			&rolesJSON,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		// Декодируем JSON с ролями
+		if err := json.Unmarshal(rolesJSON, &user.Roles); err != nil {
+			return nil, err
+		}
+
+		users = append(users, user)
+	}
+	return users, nil
 }
 
-func DBaddUser(user models.Users) error{
-	conn:= db.GetDB()
-	if conn==nil{
+func DBaddUser(user models.Users) error {
+	conn := db.GetDB()
+	if conn == nil {
 		return errors.New("connection error")
 	}
 
-	_,err :=conn.Exec( context.Background(),`
+	_, err := conn.Exec(context.Background(), `
 	INSERT INTO users (
 	surname, 
 	username, 
@@ -157,124 +157,61 @@ func DBaddUser(user models.Users) error{
 	)VALUES (
 		$1,$2,$3,$4,$5,$6,$7,$8
 	)
-	`, 
-	user.Surname,
-	user.Username,
-	user.Patronymic,
-	user.Phone,
-	user.Photo,
-	user.Email,
-	user.Login,
-	user.Password,
-)
+	`,
+		user.Surname,
+		user.Username,
+		user.Patronymic,
+		user.Phone,
+		user.Photo,
+		user.Email,
+		user.Login,
+		user.Password,
+	)
 
-if err!=nil{
-	log.Fatal(err)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return nil
+
 }
-return nil
 
-}
-
-func SetUserNotificationSettings( userID int, variants []int) error {
-    // Удаляем старые настройки пользователя
-    conn:= db.GetDB()
-	if conn==nil{
+func DBAddUserRole(user models.Users, roleID int) error {
+	conn := db.GetDB()
+	if conn == nil {
 		return errors.New("connection error")
 	}
-    _, err := conn.Exec(context.Background(),
-        `DELETE FROM notification_settings_by_user 
-         WHERE id_user = $1`,
-        userID)
-    if err != nil {
-        return fmt.Errorf("failed to delete old settings: %v", err)
-    }
 
-    // Если передан пустой список - просто удаляем все настройки
-    if len(variants) == 0 {
-        return nil
-    }
-
-    // Добавляем новые настройки
-    query := `
-        INSERT INTO notification_settings_by_user 
-            (id_user, id_notification_settings)
-        SELECT $1, ns.id_notification_settings 
-        FROM notification_settings ns
-        WHERE ns.variant_notification_settings = ANY($2)`
-
-    _, err = conn.Exec(context.Background(), query, userID, variants)
-    if err != nil {
-        return fmt.Errorf("failed to insert new settings: %v", err)
-    }
-
-    return nil
-}
-func GetUserNotificationSettings( userID int) ([]int, error) {
-    conn:= db.GetDB()
-	if conn==nil{
-		return nil, errors.New("connection error")
+	// Определяем название роли для сообщений об ошибках
+	var roleName string
+	switch roleID {
+	case 1:
+		roleName = "admin"
+	case 2:
+		roleName = "manager"
+	default:
+		return fmt.Errorf("unknown role ID: %d", roleID)
 	}
-    query := `
-        SELECT ns.variant_notification_settings 
-        FROM notification_settings_by_user nsu
-        JOIN notification_settings ns 
-          ON ns.id_notification_settings = nsu.id_notification_settings
-        WHERE nsu.id_user = $1`
 
-    rows, err := conn.Query(context.Background(), query, userID)
-    if err != nil {
-        return nil, fmt.Errorf("failed to get settings: %v", err)
-    }
-    defer rows.Close()
-
-    var variants []int
-    for rows.Next() {
-        var v int
-        if err := rows.Scan(&v); err != nil {
-            return nil, err
-        }
-        variants = append(variants, v)
-    }
-
-    return variants, nil
-}
-func DBAddUserRole(user models.Users, roleID int) error {
-    conn := db.GetDB()
-    if conn == nil {
-        return errors.New("connection error")
-    }
-
-    // Определяем название роли для сообщений об ошибках
-    var roleName string
-    switch roleID {
-    case 1:
-        roleName = "admin"
-    case 2:
-        roleName = "manager"
-    default:
-        return fmt.Errorf("unknown role ID: %d", roleID)
-    }
-
-    // Проверяем, есть ли уже такая роль у пользователя
-    var exists bool
-    err := conn.QueryRow( context.Background(),`
+	// Проверяем, есть ли уже такая роль у пользователя
+	var exists bool
+	err := conn.QueryRow(context.Background(), `
         SELECT EXISTS(
             SELECT 1 FROM user_by_role 
             WHERE id_user = $1 AND id_role = $2
         )
     `, user.Id_user, roleID).Scan(&exists)
-    
-    if err != nil {
-        log.Printf("Error checking existing %s role: %v", roleName, err)
-        return fmt.Errorf("failed to check %s role: %v", roleName, err)
-    }
 
-    if exists {
-        return fmt.Errorf("user already has %s role (id_role=%d)", roleName, roleID)
-    }
+	if err != nil {
+		log.Printf("Error checking existing %s role: %v", roleName, err)
+		return fmt.Errorf("failed to check %s role: %v", roleName, err)
+	}
 
-    // Если роли нет, добавляем
-    _, err = conn.Exec( context.Background(),`
+	if exists {
+		return fmt.Errorf("user already has %s role (id_role=%d)", roleName, roleID)
+	}
+
+	// Если роли нет, добавляем
+	_, err = conn.Exec(context.Background(), `
         INSERT INTO user_by_role (
             id_user,
             id_role
@@ -283,95 +220,95 @@ func DBAddUserRole(user models.Users, roleID int) error {
             $2
         )
     `, user.Id_user, roleID)
-    
-    if err != nil {
-        log.Printf("Error adding %s role: %v", roleName, err)
-        return fmt.Errorf("failed to add %s role: %v", roleName, err)
-    }
 
-    return nil
+	if err != nil {
+		log.Printf("Error adding %s role: %v", roleName, err)
+		return fmt.Errorf("failed to add %s role: %v", roleName, err)
+	}
+
+	return nil
 }
 
 func DBaddUserAdmin(user models.Users) error {
-    return DBAddUserRole(user, 1)
+	return DBAddUserRole(user, 1)
 }
 
 func DBaddUserMeneger(user models.Users) error {
-    return DBAddUserRole(user, 2)
+	return DBAddUserRole(user, 2)
 }
 
 func DBRemoveUserRole(user models.Users, roleID int) error {
-    conn := db.GetDB()
-    if conn == nil {
-        return errors.New("connection error")
-    }
+	conn := db.GetDB()
+	if conn == nil {
+		return errors.New("connection error")
+	}
 
-    // Определяем название роли для сообщений об ошибках
-    var roleName string
-    switch roleID {
-    case 1:
-        roleName = "admin"
-    case 2:
-        roleName = "manager"
-    default:
-        return fmt.Errorf("unknown role ID: %d", roleID)
-    }
+	// Определяем название роли для сообщений об ошибках
+	var roleName string
+	switch roleID {
+	case 1:
+		roleName = "admin"
+	case 2:
+		roleName = "manager"
+	default:
+		return fmt.Errorf("unknown role ID: %d", roleID)
+	}
 
-    // Проверяем, есть ли указанная роль у пользователя
-    var exists bool
-    err := conn.QueryRow( context.Background(),`
+	// Проверяем, есть ли указанная роль у пользователя
+	var exists bool
+	err := conn.QueryRow(context.Background(), `
         SELECT EXISTS(
             SELECT 1 FROM user_by_role 
             WHERE id_user = $1 AND id_role = $2
         )`,
-        user.Id_user,
-        roleID,
-    ).Scan(&exists)
-    
-    if err != nil {
-        log.Printf("Error checking %s role existence: %v", roleName, err)
-        return fmt.Errorf("failed to check %s role: %v", roleName, err)
-    }
+		user.Id_user,
+		roleID,
+	).Scan(&exists)
 
-    if !exists {
-        return fmt.Errorf("user doesn't have %s role (id_role=%d)", roleName, roleID)
-    }
+	if err != nil {
+		log.Printf("Error checking %s role existence: %v", roleName, err)
+		return fmt.Errorf("failed to check %s role: %v", roleName, err)
+	}
 
-    // Удаляем указанную роль
-    tag, err := conn.Exec( context.Background(),`
+	if !exists {
+		return fmt.Errorf("user doesn't have %s role (id_role=%d)", roleName, roleID)
+	}
+
+	// Удаляем указанную роль
+	tag, err := conn.Exec(context.Background(), `
         DELETE FROM user_by_role
         WHERE id_user = $1 AND id_role = $2`,
-        user.Id_user,
-        roleID,
-    )
-    
-    if err != nil {
-        log.Printf("Error removing %s role: %v", roleName, err)
-        return fmt.Errorf("failed to remove %s role: %v", roleName, err)
-    }
+		user.Id_user,
+		roleID,
+	)
 
-    // Проверяем, была ли действительно удалена запись
-    if tag.RowsAffected() == 0 {
-        return fmt.Errorf("no %s role was removed (id_user=%d)", roleName, user.Id_user)
-    }
+	if err != nil {
+		log.Printf("Error removing %s role: %v", roleName, err)
+		return fmt.Errorf("failed to remove %s role: %v", roleName, err)
+	}
 
-    return nil
+	// Проверяем, была ли действительно удалена запись
+	if tag.RowsAffected() == 0 {
+		return fmt.Errorf("no %s role was removed (id_user=%d)", roleName, user.Id_user)
+	}
+
+	return nil
 }
 func DBRemoveUserAdmin(user models.Users) error {
-    return DBRemoveUserRole(user, 1)
+	return DBRemoveUserRole(user, 1)
 }
 
 func DBRemoveUserMeneger(user models.Users) error {
-    return DBRemoveUserRole(user, 2)
+	return DBRemoveUserRole(user, 2)
 }
 
 func DBgetUserRoles(user_id int) ([]models.Role, error) {
-    conn := db.GetDB()
-    if conn == nil {
-        return nil, errors.New("connection error")
-    }
+	conn := db.GetDB()
+	if conn == nil {
+		return nil, errors.New("connection error")
+	}
 
-    rows, err := conn.Query( context.Background(),`
+	rows, err := conn.Query(context.Background(), `
         SELECT 
             r.id_role, 
             r.name_role 
@@ -381,32 +318,31 @@ func DBgetUserRoles(user_id int) ([]models.Role, error) {
             roles r ON ubr.id_role = r.id_role 
         WHERE 
             ubr.id_user = $1`, user_id)
-    if err != nil {
-        return nil, fmt.Errorf("query error: %v", err)
-    }
-    defer rows.Close()
+	if err != nil {
+		return nil, fmt.Errorf("query error: %v", err)
+	}
+	defer rows.Close()
 
-    var roles []models.Role
-    for rows.Next() {
-        var role models.Role
-        err := rows.Scan(&role.Id_role, &role.Name_role)
-        if err != nil {
-            return nil, fmt.Errorf("scan error: %v", err)
-        }
-        roles = append(roles, role)
-    }
+	var roles []models.Role
+	for rows.Next() {
+		var role models.Role
+		err := rows.Scan(&role.Id_role, &role.Name_role)
+		if err != nil {
+			return nil, fmt.Errorf("scan error: %v", err)
+		}
+		roles = append(roles, role)
+	}
 
-    return roles, nil
+	return roles, nil
 }
 
-
-func DBchangeUser(user models.Users) error{
-	conn:= db.GetDB()
-	if conn==nil{
+func DBchangeUser(user models.Users) error {
+	conn := db.GetDB()
+	if conn == nil {
 		return errors.New("connection error")
 	}
 
-	_,err :=conn.Exec( context.Background(),`
+	_, err := conn.Exec(context.Background(), `
 	UPDATE users SET 
 	surname=$1,
 	username=$2,
@@ -417,34 +353,34 @@ func DBchangeUser(user models.Users) error{
 	login=$7,
 	password=$8
 	WHERE id_user=$9
-	`, 
-	user.Surname,
-	user.Username,
-	user.Patronymic,
-	user.Phone,
-	user.Photo,
-	user.Email,
-	user.Login,
-	user.Password,
-	user.Id_user,
-)
-if err!=nil{
-	log.Fatal(err)
-}
-return nil
+	`,
+		user.Surname,
+		user.Username,
+		user.Patronymic,
+		user.Phone,
+		user.Photo,
+		user.Email,
+		user.Login,
+		user.Password,
+		user.Id_user,
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return nil
 }
 
-func DBdeleteUser(user_id int) error{
-	conn:= db.GetDB()
+func DBdeleteUser(user_id int) error {
+	conn := db.GetDB()
 
-	if conn==nil{
+	if conn == nil {
 		return errors.New("connection error")
 	}
 
-	_,err :=conn.Exec( context.Background(),`
+	_, err := conn.Exec(context.Background(), `
 	DELETE FROM users WHERE id_user=$1`, user_id)
-if err!=nil{
-	log.Fatal(err)	
-}
-return nil
+	if err != nil {
+		log.Fatal(err)
+	}
+	return nil
 }

@@ -66,7 +66,18 @@ func SetupDatabase() error {
 	}
 	fmt.Println("Table notifications created successfully")
 
-	
+	_, err = tx.Exec(context.Background(),`CREATE TABLE if not exists users (
+		id_user SERIAL PRIMARY KEY,
+		surname VARCHAR(255) NOT NULL,
+		username VARCHAR(255) NOT NULL,
+		patronymic VARCHAR(255) NOT NULL,
+		phone VARCHAR(20) NOT NULL,
+		photo VARCHAR(255) NOT NULL,
+		email VARCHAR(255) NOT NULL,
+		login VARCHAR(255) NOT NULL unique,
+		password VARCHAR(255) NOT NULL
+
+	)`)
 	if err != nil {
 		log.Fatal("Error users creating table : ", err)
 	}
