@@ -5,11 +5,14 @@ import (
 	db "appContract/pkg/db/repository"
 	"appContract/pkg/models"
 	"encoding/json"
+	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"strconv"
 
 	"github.com/gorilla/mux"
+	"github.com/jackc/pgx"
 )
 
 // Stages
@@ -275,54 +278,52 @@ func GetStageFiles(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetStageFilesID(w http.ResponseWriter, r *http.Request) {
+    // Проверка метода запроса
     if r.Method != http.MethodGet {
-        http.Error(w, "Invalid request method GetStageFiles", http.StatusBadRequest)
-        return
-    }
-    vars:=mux.Vars(r)
-    stageID:=vars["stageID"]
-    if stageID==""{
-        http.Error(w,"Invalid stage_id",http.StatusBadRequest)
-        return
-    }
-    fileID:=vars["fileID"]
-    if fileID==""{
-        http.Error(w,"Invalid file_id",http.StatusBadRequest)
-        return
-    }
-    id_stage, err:=strconv.Atoi(stageID)
-    if err != nil {
-        http.Error(w, "Invalid stage_id", http.StatusBadRequest)
-        return
-    }
-    id_file, err:=strconv.Atoi(fileID)
-    if err != nil {
-        http.Error(w, "Invalid file_id", http.StatusBadRequest)
+        http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
         return
     }
 
-    file, err := db.DBgetFileIDStageID(id_stage, id_file)
+    // Извлечение параметров из URL
+    vars := mux.Vars(r)
+    stageID := vars["stageID"]
+    fileID := vars["fileID"]
+
+    // Конвертация параметров в числа
+    idStage, err := strconv.Atoi(stageID)
     if err != nil {
-        http.Error(w, err.Error(), http.StatusInternalServerError)
+        http.Error(w, "Invalid Stage ID format", http.StatusBadRequest)
+        return
+    }
+    
+    idFile, err := strconv.Atoi(fileID)
+    if err != nil {
+        http.Error(w, "Invalid File ID format", http.StatusBadRequest)
         return
     }
 
-    fileResponse := map[string]interface{}{
-        "id_file": file.Id_file,
-        "name_file": file.Name_file,
-        "data": file.Data,
-        "type_file": file.Type_file,
-        "id_stage": file.Id_stage,
-    }
-
-    data, err := json.Marshal(fileResponse)
+    // Получение файла из БД
+    file, err := db.DBgetFileIDStageID(idStage, idFile)
     if err != nil {
-        http.Error(w, err.Error(), http.StatusInternalServerError)
+        if err == pgx.ErrNoRows { 
+            http.Error(w, "File not found", http.StatusNotFound)
+        } else {
+            http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+        }
+        log.Printf("Database error: %v", err)
         return
     }
 
-    w.WriteHeader(http.StatusOK)
-    w.Write(data)
+    
+    w.Header().Set("Content-Type", file.Type_file)
+    w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", file.Name_file))
+    w.Header().Set("Content-Length", strconv.Itoa(len(file.Data)))
+
+    // Отправка файла
+    if _, err := w.Write(file.Data); err != nil {
+        log.Printf("Failed to send file: %v", err)
+        http.Error(w, "File transmission failed", http.StatusInternalServerError)
+    }
 }
 func GetStageStatus(w http.ResponseWriter, r *http.Request) {
     if r.Method != http.MethodGet {
@@ -409,54 +410,61 @@ func GetComments(w http.ResponseWriter, r *http.Request) {
 
 func PostFileToStage(w http.ResponseWriter, r *http.Request) {
     if r.Method != http.MethodPost {
-        http.Error(w, "Invalid request method PostFileToStage", http.StatusBadRequest)
+        http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
         return
     }
 
-    // Парсим multipart/form-data запрос
-    err := r.ParseMultipartForm(32 << 20) // 32MB
+    // Увеличиваем лимит размера запроса
+    if err := r.ParseMultipartForm(32 << 20); err != nil { // 32MB
+        http.Error(w, "Unable to parse form: " + err.Error(), http.StatusBadRequest)
+        return
+    }
+    // Получаем stage_id из URL
+    vars := mux.Vars(r)
+    stageID, err := strconv.Atoi(vars["stage_id"])
     if err != nil {
-        http.Error(w, err.Error(), http.StatusInternalServerError)
+        http.Error(w, "Invalid stage ID", http.StatusBadRequest)
         return
     }
 
-    // Проверяем, что запрос содержит файл
-    if r.MultipartForm == nil {
-        http.Error(w, "Invalid request body PostFileToStage", http.StatusBadRequest)
-        return
-    }
+   
 
     // Получаем файл из запроса
     file, handler, err := r.FormFile("file")
     if err != nil {
-        http.Error(w, err.Error(), http.StatusInternalServerError)
+        http.Error(w, "Failed to get file: " + err.Error(), http.StatusBadRequest)
         return
     }
     defer file.Close()
 
-    // Создаем новый файл в базе данных
+    // Читаем ВСЕ данные файла
+    fileData, err := io.ReadAll(file)
+    if err != nil {
+        http.Error(w, "Failed to read file: " + err.Error(), http.StatusInternalServerError)
+        return
+    }
+
+    // Создаем объект файла
     newFile := models.File{
         Name_file: handler.Filename,
-        Data:      make([]byte, handler.Size),
+        Data:      fileData,
         Type_file: handler.Header.Get("Content-Type"),
-        Id_stage:  1, // замените на правильный id_stage
+        Id_stage:  stageID,
+        
     }
 
-    // Читаем файл из запроса и записываем его в базу данных
-    _, err = file.Read(newFile.Data)
-    if err != nil {
-        http.Error(w, err.Error(), http.StatusInternalServerError)
+    // Сохраняем в БД
+    if err := db.DBaddFile(newFile); err != nil {
+        http.Error(w, "Database error: " + err.Error(), http.StatusInternalServerError)
         return
     }
 
-    err = db.DBaddFile(newFile)
-    if err != nil {
-        http.Error(w, err.Error(), http.StatusInternalServerError)
-        return
-    }
-
-    w.WriteHeader(http.StatusOK)
-    json.NewEncoder(w).Encode(map[string]string{"message": "File uploaded successfully"})
+    w.WriteHeader(http.StatusCreated)
+    json.NewEncoder(w).Encode(map[string]string{
+        "message": "File uploaded successfully",
+        "name":    handler.Filename,
+        "size":    fmt.Sprintf("%d bytes", handler.Size),
+    })
 }
 
 func PostCreateStage(w http.ResponseWriter, r *http.Request) {

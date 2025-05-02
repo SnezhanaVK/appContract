@@ -174,6 +174,70 @@ if err!=nil{
 return nil
 
 }
+
+func SetUserNotificationSettings( userID int, variants []int) error {
+    // Удаляем старые настройки пользователя
+    conn:= db.GetDB()
+	if conn==nil{
+		return errors.New("connection error")
+	}
+    _, err := conn.Exec(context.Background(),
+        `DELETE FROM notification_settings_by_user 
+         WHERE id_user = $1`,
+        userID)
+    if err != nil {
+        return fmt.Errorf("failed to delete old settings: %v", err)
+    }
+
+    // Если передан пустой список - просто удаляем все настройки
+    if len(variants) == 0 {
+        return nil
+    }
+
+    // Добавляем новые настройки
+    query := `
+        INSERT INTO notification_settings_by_user 
+            (id_user, id_notification_settings)
+        SELECT $1, ns.id_notification_settings 
+        FROM notification_settings ns
+        WHERE ns.variant_notification_settings = ANY($2)`
+
+    _, err = conn.Exec(context.Background(), query, userID, variants)
+    if err != nil {
+        return fmt.Errorf("failed to insert new settings: %v", err)
+    }
+
+    return nil
+}
+func GetUserNotificationSettings( userID int) ([]int, error) {
+    conn:= db.GetDB()
+	if conn==nil{
+		return nil, errors.New("connection error")
+	}
+    query := `
+        SELECT ns.variant_notification_settings 
+        FROM notification_settings_by_user nsu
+        JOIN notification_settings ns 
+          ON ns.id_notification_settings = nsu.id_notification_settings
+        WHERE nsu.id_user = $1`
+
+    rows, err := conn.Query(context.Background(), query, userID)
+    if err != nil {
+        return nil, fmt.Errorf("failed to get settings: %v", err)
+    }
+    defer rows.Close()
+
+    var variants []int
+    for rows.Next() {
+        var v int
+        if err := rows.Scan(&v); err != nil {
+            return nil, err
+        }
+        variants = append(variants, v)
+    }
+
+    return variants, nil
+}
 func DBAddUserRole(user models.Users, roleID int) error {
     conn := db.GetDB()
     if conn == nil {
@@ -228,7 +292,6 @@ func DBAddUserRole(user models.Users, roleID int) error {
     return nil
 }
 
-// Тогда оригинальные функции можно переписать так:
 func DBaddUserAdmin(user models.Users) error {
     return DBAddUserRole(user, 1)
 }
@@ -300,6 +363,40 @@ func DBRemoveUserAdmin(user models.Users) error {
 
 func DBRemoveUserMeneger(user models.Users) error {
     return DBRemoveUserRole(user, 2)
+}
+
+func DBgetUserRoles(user_id int) ([]models.Role, error) {
+    conn := db.GetDB()
+    if conn == nil {
+        return nil, errors.New("connection error")
+    }
+
+    rows, err := conn.Query( context.Background(),`
+        SELECT 
+            r.id_role, 
+            r.name_role 
+        FROM 
+            user_by_role ubr 
+        INNER JOIN 
+            roles r ON ubr.id_role = r.id_role 
+        WHERE 
+            ubr.id_user = $1`, user_id)
+    if err != nil {
+        return nil, fmt.Errorf("query error: %v", err)
+    }
+    defer rows.Close()
+
+    var roles []models.Role
+    for rows.Next() {
+        var role models.Role
+        err := rows.Scan(&role.Id_role, &role.Name_role)
+        if err != nil {
+            return nil, fmt.Errorf("scan error: %v", err)
+        }
+        roles = append(roles, role)
+    }
+
+    return roles, nil
 }
 
 

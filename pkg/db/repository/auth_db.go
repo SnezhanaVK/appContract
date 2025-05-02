@@ -5,6 +5,8 @@ import (
 	"appContract/pkg/models"
 	"context"
 	"database/sql"
+	"encoding/json"
+	"fmt"
 
 	//"encoding/json"
 	"errors"
@@ -12,7 +14,6 @@ import (
 	"log"
 
 	"github.com/jackc/pgx"
-	"github.com/lib/pq"
 )
 
 // Изменения в SQL-запросе
@@ -28,7 +29,10 @@ func Authorize(login string, password string) (*models.Users, error) {
             u.email,
             u.login,
             u.password,
-            ARRAY_AGG(r.id_role) AS roles  
+            COALESCE(json_agg(json_build_object(
+                'id_role', r.id_role, 
+                'name_role', r.name_role
+            )) FILTER (WHERE r.id_role IS NOT NULL), '[]'::json) AS roles
         FROM users u
         LEFT JOIN user_by_role ubr ON u.id_user = ubr.id_user
         LEFT JOIN roles r ON ubr.id_role = r.id_role
@@ -37,46 +41,35 @@ func Authorize(login string, password string) (*models.Users, error) {
     `
 
     var user models.Users
-    var roles []int
+    var rolesJSON []byte
 
-    // Используем pq.Int32Array для обработки NULL
-    var pgRoles pq.Int32Array
-    
     err := conn.QueryRow(context.Background(),query, login, password).Scan(
         &user.Id_user,
         &user.Email,
         &user.Login,
         &user.Password,
-        &pgRoles,
+        &rolesJSON,
     )
 
     if err != nil {
-        if errors.Is(err, pgx.ErrNoRows) {
+        if err == pgx.ErrNoRows {
             return nil, errors.New("user not found")
         }
         return nil, err
     }
 
-    // Преобразование pq.Int32Array в []int
-    roles = make([]int, len(pgRoles))
-    for i, v := range pgRoles {
-        roles[i] = int(v)
+    // Декодируем роли
+    if err := json.Unmarshal(rolesJSON, &user.Roles); err != nil {
+        return nil, fmt.Errorf("failed to decode roles: %v", err)
     }
 
-    // Обработка NULL массива
-    if len(roles) == 1 && roles[0] == 0 {
-        roles = []int{}
-    }
-
-    user.Admin = false
-    user.Manager = false
-    for _, role := range roles {
-        if role == 1 {
-            user.Admin = true
-        }
-        if role == 2 {
-            user.Manager = true
-        }
+    // Заполняем первую роль для совместимости
+    if len(user.Roles) > 0 {
+        user.Id_role = user.Roles[0].Id_role
+        user.Name_role = user.Roles[0].Name_role
+    } else {
+        user.Id_role = 0
+        user.Name_role = ""
     }
 
     return &user, nil

@@ -139,26 +139,7 @@ func PostCreateUser(w http.ResponseWriter, r *http.Request) {
     json.NewEncoder(w).Encode(map[string]string{"message": "User created successfully"})
 }
 
-// func PostAddUserRole(w http.ResponseWriter, r *http.Request) {
-// 	if r.Method != http.MethodPost {
-// 		http.Error(w, "Invalid request method PostAddUserRole", http.StatusBadRequest)
-// 		return
-// 	}
-// 	var user models.Users
 
-// 	err := json.NewDecoder(r.Body).Decode(&user)
-// 	if err != nil {
-// 		http.Error(w, "Invalid request body PostAddUserRole", http.StatusBadRequest)
-// 		return
-// 	}
-// 	err = servis.AddRole(user.Id_user, user.Id_role)
-// 	if err != nil {
-// 		http.Error(w, err.Error(), http.StatusInternalServerError)
-// 		return
-// 	}
-// 	w.WriteHeader(http.StatusCreated)
-// 	json.NewEncoder(w).Encode(map[string]string{"message": "User role added successfully"})
-// }
 func PostAddRoleAdmin(w http.ResponseWriter, r *http.Request) {
     if r.Method != http.MethodPost {
         http.Error(w, "Invalid request method PostAddRoleAdmin", http.StatusBadRequest)
@@ -269,6 +250,38 @@ func DeleteRemoveRoleManager(w http.ResponseWriter, r *http.Request) {
     }
     w.WriteHeader(http.StatusCreated)
     json.NewEncoder(w).Encode(map[string]string{"message": "User role removed successfully"})
+}
+
+func GetUserRoles(w http.ResponseWriter, r *http.Request) {
+    if r.Method != http.MethodGet {
+        http.Error(w, "Invalid request method", http.StatusBadRequest)
+        return
+    }
+
+    vars := mux.Vars(r)
+    userId := vars["userID"]
+    if userId == "" {
+        http.Error(w, "Invalid user_id", http.StatusBadRequest)
+        return
+    }
+
+    id, err := strconv.Atoi(userId)
+    if err != nil {
+        http.Error(w, "Invalid user_id", http.StatusBadRequest)
+        return
+    }
+
+    roles, err := db.DBgetUserRoles(id)
+    if err != nil {
+        http.Error(w, err.Error(), http.StatusInternalServerError)
+        return
+    }
+
+    w.Header().Set("Content-Type", "application/json")
+    if err := json.NewEncoder(w).Encode(roles); err != nil {
+        http.Error(w, err.Error(), http.StatusInternalServerError)
+        return
+    }
 }
 
 //нужно додлать до рабочего состояния

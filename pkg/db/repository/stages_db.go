@@ -7,6 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"log"
+
+	"github.com/jackc/pgx"
 )
 
 func DBgetStageAll() ([]models.Stages, error) {
@@ -146,7 +148,7 @@ func DBgetStageByContractID(id_contract int) ([]models.Stages, error) {
     return stages, nil
 }
 
-// db.go - Измененный SQL-запрос
+
 func DBgetStageUserID(user_id int) ([]models.Stages, error) {
     conn := db.GetDB()
     if conn == nil {
@@ -275,34 +277,41 @@ WHERE s.id_stage=$1`, stage_id)
 	}
 	return stage, nil
 }
-func DBgetFileIDStageID(id_stages int, id_file int) (models.File, error) {
-	conn:= db.GetDB()	
-	if conn == nil {
-		return models.File{}, errors.New("DB connection is nil")
-	}
+func DBgetFileIDStageID(id_stage int, id_file int) (models.File, error) {
+    conn := db.GetDB()
+    if conn == nil {
+        return models.File{}, errors.New("DB connection is nil")
+    }
 
-	rows, err := conn.Query( context.Background(),"SELECT * FROM files WHERE Id_stage=$1 AND Id_file=$2", id_stages, id_file)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer rows.Close()
-
+    var file models.File
     var data []byte
-	var file models.File
-	for rows.Next() {
-		err = rows.Scan(
-            &file.Id_file,
-			&file.Name_file,
-			&data,
-			&file.Type_file,
-			&file.Id_stage)
-        file.Data = data
-		if err != nil {
-			log.Fatal(err)
-		}
-        
-	}
-	return file, nil
+    
+    // Используем QueryRow для одной записи
+    err := conn.QueryRow(
+        context.Background(),
+        `SELECT id_file, name_file, data, type_file, id_stage 
+         FROM files 
+         WHERE id_stage = $1 AND id_file = $2`,
+        id_stage,
+        id_file,
+    ).Scan(
+        &file.Id_file,
+        &file.Name_file,
+        &data,
+        &file.Type_file,
+        &file.Id_stage,
+    )
+    
+    file.Data = data
+
+    if err != nil {
+        if err == pgx.ErrNoRows {
+            return models.File{}, fmt.Errorf("file not found")
+        }
+        return models.File{}, fmt.Errorf("database error: %v", err)
+    }
+    
+    return file, nil
 }
 
 func DBgetFilesStageID(id_stages int) ([]models.File, error) {
@@ -363,27 +372,25 @@ func DBgetStageIdStatus(id_stage int) (models.StatusStage, error) {
 }
 
 func DBaddFile(file models.File) error {
-	conn:= db.GetDB()
-	if conn == nil {
-		return errors.New("DB connection is nil")
-	}
-	
+    conn := db.GetDB()
+    if conn == nil {
+        return errors.New("DB connection is nil")
+    }
 
-	_, err := conn.Exec( context.Background(),`INSERT INTO files (
-        name_file,
-        data,
-        type_file,
-        id_stage
-    ) VALUES ($1,$2,$3,$4)`,
-    file.Name_file,
-    file.Data,
-    file.Type_file,
-    file.Id_stage)
+    _, err := conn.Exec(context.Background(), `
+        INSERT INTO files (
+            name_file,
+            data,
+            type_file,
+            id_stage
+        ) VALUES ($1, $2, $3, $4)`,
+        file.Name_file,
+        file.Data,
+        file.Type_file,
+        file.Id_stage,
+    )
 
-	if err != nil {
-		log.Fatal(err)
-	}
-	return nil
+    return err // Возвращаем ошибку напрямую
 }
 func DBaddStage(stage models.Stages) error {
 	conn:= db.GetDB()
