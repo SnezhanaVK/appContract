@@ -35,6 +35,9 @@ type Stages struct {
 	Comment             string    `json:"comment"`
 	Id_comment          int       `json:"id_comment"`
 	Date_create_comment time.Time `json:"date_create_comment"`
+	ContractSurname     string    `json:"contract_surname"`    // Пользователь контракта
+	ContractUsername    string    `json:"contract_username"`   // Пользователь контракта
+	ContractPatronymic  string    `json:"contract_patronymic"` // Пользователь контракта
 }
 type StatusStage struct {
 	Id_status_stage   int    `json:"id_status_stage"`

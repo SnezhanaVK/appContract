@@ -137,6 +137,31 @@ func DBgetUserID(user_id int) ([]models.Users, error) {
 	return users, nil
 }
 
+func DBGetUserPasswordandLogin(user_id int) (models.Users, error) {
+	conn := db.GetDB()
+	if conn == nil {
+		return models.Users{}, fmt.Errorf("connection error")
+	}
+
+	var user models.Users
+
+	err := conn.QueryRow(context.Background(), `
+		SELECT 
+			login,
+			password
+		FROM users
+		WHERE id_user = $1`, user_id).Scan(
+		&user.Login,
+		&user.Password,
+	)
+	if err != nil {
+		log.Printf("Error getting user password and login: %v", err)
+		return models.Users{}, fmt.Errorf("failed to get user password and login: %v", err)
+	}
+
+	return user, nil
+}
+
 func DBaddUser(user models.Users) error {
 	conn := db.GetDB()
 	if conn == nil {

@@ -147,16 +147,19 @@ func GetUserStages(w http.ResponseWriter, r *http.Request) {
 	var responses []map[string]interface{}
 	for _, stage := range stages {
 		response := map[string]interface{}{
-			"id_stage":          stage.Id_stage,
-			"name_stage":        stage.Name_stage,
-			"description":       stage.Description,
-			"date_create_start": stage.Date_create_start,
-			"date_create_end":   stage.Date_create_end,
-			"name_contract":     stage.Name_contract,
-			"name_status_stage": stage.Name_status_stage,
-			"surname":           stage.Surname,
-			"username":          stage.Username,
-			"patronymic":        stage.Patronymic,
+			"id_stage":            stage.Id_stage,
+			"name_stage":          stage.Name_stage,
+			"description":         stage.Description,
+			"date_create_start":   stage.Date_create_start,
+			"date_create_end":     stage.Date_create_end,
+			"name_contract":       stage.Name_contract,
+			"name_status_stage":   stage.Name_status_stage,
+			"surname":             stage.Surname,
+			"username":            stage.Username,
+			"patronymic":          stage.Patronymic,
+			"contract_surname":    stage.ContractSurname,
+			"contract_username":   stage.ContractUsername,
+			"contract_patronymic": stage.ContractPatronymic,
 		}
 		responses = append(responses, response)
 

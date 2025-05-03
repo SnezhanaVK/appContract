@@ -12,11 +12,11 @@ import (
 )
 
 func DBgetStageAll() ([]models.Stages, error) {
-	conn:= db.GetDB()
+	conn := db.GetDB()
 	if conn == nil {
 		return nil, errors.New("DB connection is nil")
 	}
-    rows, err := conn.Query( context.Background(),`SELECT 
+	rows, err := conn.Query(context.Background(), `SELECT 
     s.id_stage,
     s.name_stage,
     s.id_user,
@@ -72,12 +72,12 @@ JOIN status_stages ss ON hs.id_status_stage = ss.id_status_stage`)
 }
 
 func DBgetStageByContractID(id_contract int) ([]models.Stages, error) {
-    conn := db.GetDB()
-    if conn == nil {
-        return nil, errors.New("DB connection is nil")
-    }
+	conn := db.GetDB()
+	if conn == nil {
+		return nil, errors.New("DB connection is nil")
+	}
 
-    rows, err := conn.Query( context.Background(),`
+	rows, err := conn.Query(context.Background(), `
         SELECT 
             s.id_stage,
             s.name_stage,
@@ -109,118 +109,124 @@ func DBgetStageByContractID(id_contract int) ([]models.Stages, error) {
         WHERE s.id_contract = $1
         ORDER BY s.id_stage
     `, id_contract)
-    
-    if err != nil {
-        return nil, fmt.Errorf("query failed: %w", err)
-    }
-    defer rows.Close()
 
-    var stages []models.Stages
-    for rows.Next() {
-        var stage models.Stages
-        err := rows.Scan(
-            &stage.Id_stage,
-            &stage.Name_stage,
-            &stage.Id_user,
-            &stage.Surname,
-            &stage.Username,
-            &stage.Patronymic,
-            &stage.Description,
-            &stage.Data_create,
-            &stage.Date_create_end,
-            &stage.Id_contract,
-            &stage.Name_contract,
-            &stage.Data_contract_create,
-            &stage.Id_status_stage,
-            &stage.Name_status_stage,
-            &stage.Date_change_status,
-        )
-        if err != nil {
-            return nil, fmt.Errorf("scan failed: %w", err)
-        }
-        stages = append(stages, stage)
-    }
+	if err != nil {
+		return nil, fmt.Errorf("query failed: %w", err)
+	}
+	defer rows.Close()
 
-    if err = rows.Err(); err != nil {
-        return nil, fmt.Errorf("rows error: %w", err)
-    }
+	var stages []models.Stages
+	for rows.Next() {
+		var stage models.Stages
+		err := rows.Scan(
+			&stage.Id_stage,
+			&stage.Name_stage,
+			&stage.Id_user,
+			&stage.Surname,
+			&stage.Username,
+			&stage.Patronymic,
+			&stage.Description,
+			&stage.Data_create,
+			&stage.Date_create_end,
+			&stage.Id_contract,
+			&stage.Name_contract,
+			&stage.Data_contract_create,
+			&stage.Id_status_stage,
+			&stage.Name_status_stage,
+			&stage.Date_change_status,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan failed: %w", err)
+		}
+		stages = append(stages, stage)
+	}
 
-    return stages, nil
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows error: %w", err)
+	}
+
+	return stages, nil
 }
 
-
 func DBgetStageUserID(user_id int) ([]models.Stages, error) {
-    conn := db.GetDB()
-    if conn == nil {
-        return nil, errors.New("database connection is nil")
-    }
+	conn := db.GetDB()
+	if conn == nil {
+		return nil, errors.New("database connection is nil")
+	}
 
-    rows, err := conn.Query(context.Background(), `
+	rows, err := conn.Query(context.Background(), `
+    SELECT 
+        s.id_stage,
+        s.name_stage,
+        s.description,
+        s.date_create_start,
+        s.date_create_end,
+        c.name_contract,
+        ss.name_status_stage,
+        u.surname,          
+        u.username,         
+        u.patronymic,       
+        cu.surname AS contract_surname,     
+        cu.username AS contract_username,  
+        cu.patronymic AS contract_patronymic 
+    FROM stages s
+    JOIN contracts c ON s.id_contract = c.id_contract
+    JOIN users cu ON c.id_user = cu.id_user 
+    JOIN (
         SELECT 
-            s.id_stage,
-            s.name_stage,
-            s.description,
-            s.date_create_start,
-            s.date_create_end,
-            c.name_contract,
-            ss.name_status_stage,
-            u.surname,
-            u.username,
-            u.patronymic
-        FROM stages s
-        JOIN contracts c ON s.id_contract = c.id_contract
-        JOIN (
-            SELECT 
-                id_stage, 
-                MAX(id_history_status) as last_status
-            FROM history_status
-            GROUP BY id_stage
-        ) last_hs ON s.id_stage = last_hs.id_stage
-        JOIN history_status hs ON last_hs.last_status = hs.id_history_status
-        JOIN status_stages ss ON hs.id_status_stage = ss.id_status_stage
-        JOIN users u ON s.id_user = u.id_user
-        WHERE s.id_user = $1
-    `, user_id)
+            id_stage, 
+            MAX(id_history_status) as last_status
+        FROM history_status
+        GROUP BY id_stage
+    ) last_hs ON s.id_stage = last_hs.id_stage
+    JOIN history_status hs ON last_hs.last_status = hs.id_history_status
+    JOIN status_stages ss ON hs.id_status_stage = ss.id_status_stage
+    JOIN users u ON s.id_user = u.id_user
+    WHERE s.id_user = $1
+`, user_id)
 
-    if err != nil {
-        return nil, fmt.Errorf("query error: %w", err)
-    }
-    defer rows.Close()
+	if err != nil {
+		return nil, fmt.Errorf("query error: %w", err)
+	}
+	defer rows.Close()
 
-    var stages []models.Stages
-    for rows.Next() {
-        var stage models.Stages
-        if err := rows.Scan(
-            &stage.Id_stage,
-            &stage.Name_stage,
-            &stage.Description,
-            &stage.Date_create_start,
-            &stage.Date_create_end,
-            &stage.Name_contract,
-            &stage.Name_status_stage,
-            &stage.Surname,
-            &stage.Username,
-            &stage.Patronymic,
-        ); err != nil {
-            return nil, fmt.Errorf("scan error: %w", err)
-        }
-        stages = append(stages, stage)
-    }
+	var stages []models.Stages
+	for rows.Next() {
+		var stage models.Stages
+		if err := rows.Scan(
+			&stage.Id_stage,
+			&stage.Name_stage,
+			&stage.Description,
+			&stage.Date_create_start,
+			&stage.Date_create_end,
+			&stage.Name_contract,
+			&stage.Name_status_stage,
+			&stage.Surname,
+			&stage.Username,
+			&stage.Patronymic,
+			&stage.ContractSurname,
+			&stage.ContractUsername,
+			&stage.ContractPatronymic,
+		); err != nil {
+			return nil, fmt.Errorf("scan error: %w", err)
+		}
+		stages = append(stages, stage)
+	}
 
-    if err := rows.Err(); err != nil {
-        return nil, fmt.Errorf("rows error: %w", err)
-    }
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows error: %w", err)
+	}
 
-    return stages, nil
+	return stages, nil
 }
 
 func DBgetStageID(stage_id int) (models.Stages, error) {
-	conn:= db.GetDB()
+	conn := db.GetDB()
 	if conn == nil {
 		return models.Stages{}, errors.New("DB connection is nil")
 	}
 
-	rows, err := conn.Query( context.Background(),`SELECT 
+	rows, err := conn.Query(context.Background(), `SELECT 
     s.id_stage,
     s.name_stage,
     s.id_user,
@@ -278,40 +284,40 @@ WHERE s.id_stage=$1`, stage_id)
 	return stage, nil
 }
 func DBgetFileIDStageID(id_stage int, id_file int) (models.File, error) {
-    conn := db.GetDB()
-    if conn == nil {
-        return models.File{}, errors.New("DB connection is nil")
-    }
+	conn := db.GetDB()
+	if conn == nil {
+		return models.File{}, errors.New("DB connection is nil")
+	}
 
-    var file models.File
-    var data []byte
-    
-    // Используем QueryRow для одной записи
-    err := conn.QueryRow(
-        context.Background(),
-        `SELECT id_file, name_file, data, type_file, id_stage 
+	var file models.File
+	var data []byte
+
+	// Используем QueryRow для одной записи
+	err := conn.QueryRow(
+		context.Background(),
+		`SELECT id_file, name_file, data, type_file, id_stage 
          FROM files 
          WHERE id_stage = $1 AND id_file = $2`,
-        id_stage,
-        id_file,
-    ).Scan(
-        &file.Id_file,
-        &file.Name_file,
-        &data,
-        &file.Type_file,
-        &file.Id_stage,
-    )
-    
-    file.Data = data
+		id_stage,
+		id_file,
+	).Scan(
+		&file.Id_file,
+		&file.Name_file,
+		&data,
+		&file.Type_file,
+		&file.Id_stage,
+	)
 
-    if err != nil {
-        if err == pgx.ErrNoRows {
-            return models.File{}, fmt.Errorf("file not found")
-        }
-        return models.File{}, fmt.Errorf("database error: %v", err)
-    }
-    
-    return file, nil
+	file.Data = data
+
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return models.File{}, fmt.Errorf("file not found")
+		}
+		return models.File{}, fmt.Errorf("database error: %v", err)
+	}
+
+	return file, nil
 }
 
 func DBgetFilesStageID(id_stages int) ([]models.File, error) {
@@ -320,39 +326,38 @@ func DBgetFilesStageID(id_stages int) ([]models.File, error) {
 		return nil, errors.New("DB connection is nil")
 	}
 
-	rows, err := conn.Query( context.Background(),"SELECT * FROM files WHERE Id_stage=$1", id_stages)
+	rows, err := conn.Query(context.Background(), "SELECT * FROM files WHERE Id_stage=$1", id_stages)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer rows.Close()
 
-    var data []byte
+	var data []byte
 	var files []models.File
 	for rows.Next() {
-        var file models.File
+		var file models.File
 		err = rows.Scan(
-            &file.Id_file,
+			&file.Id_file,
 			&file.Name_file,
 			&data,
 			&file.Type_file,
 			&file.Id_stage)
-        file.Data = data
+		file.Data = data
 		if err != nil {
 			log.Fatal(err)
 		}
-        files = append(files, file)
+		files = append(files, file)
 	}
 	return files, nil
 }
 
 func DBgetStageIdStatus(id_stage int) (models.StatusStage, error) {
-	conn:= db.GetDB()
+	conn := db.GetDB()
 	if conn == nil {
 		return models.StatusStage{}, errors.New("DB connection is nil")
 	}
-	
 
-	rows, err := conn.Query( context.Background(),`SELECT * 
+	rows, err := conn.Query(context.Background(), `SELECT * 
                             FROM status_stages
                             WHERE id_status_stage=$1`, id_stage)
 	if err != nil {
@@ -372,33 +377,33 @@ func DBgetStageIdStatus(id_stage int) (models.StatusStage, error) {
 }
 
 func DBaddFile(file models.File) error {
-    conn := db.GetDB()
-    if conn == nil {
-        return errors.New("DB connection is nil")
-    }
+	conn := db.GetDB()
+	if conn == nil {
+		return errors.New("DB connection is nil")
+	}
 
-    _, err := conn.Exec(context.Background(), `
+	_, err := conn.Exec(context.Background(), `
         INSERT INTO files (
             name_file,
             data,
             type_file,
             id_stage
         ) VALUES ($1, $2, $3, $4)`,
-        file.Name_file,
-        file.Data,
-        file.Type_file,
-        file.Id_stage,
-    )
+		file.Name_file,
+		file.Data,
+		file.Type_file,
+		file.Id_stage,
+	)
 
-    return err // Возвращаем ошибку напрямую
+	return err // Возвращаем ошибку напрямую
 }
 func DBaddStage(stage models.Stages) error {
-	conn:= db.GetDB()
+	conn := db.GetDB()
 	if conn == nil {
 		return errors.New("DB connection is nil")
 	}
 
-	_, err := conn.Exec( context.Background(),`INSERT INTO stages(
+	_, err := conn.Exec(context.Background(), `INSERT INTO stages(
     name_stage,
     id_user,
     description,
@@ -421,103 +426,102 @@ func DBaddStage(stage models.Stages) error {
 }
 
 func DBaddComment(idStage int, idStatusStage int, comment string) error {
-	conn:= db.GetDB()
+	conn := db.GetDB()
 	if conn == nil {
 		return errors.New("DB connection is nil")
 	}
 
-    var idHistoryState int
-    err := conn.QueryRow( context.Background(),`SELECT id_history_status FROM history_status
+	var idHistoryState int
+	err := conn.QueryRow(context.Background(), `SELECT id_history_status FROM history_status
         WHERE id_stage = $1 AND id_status_stage = $2`,
-        idStage,
-        idStatusStage).Scan(&idHistoryState)
+		idStage,
+		idStatusStage).Scan(&idHistoryState)
 
-    if err != nil {
-        log.Fatal(err)
-    }
+	if err != nil {
+		log.Fatal(err)
+	}
 
-    _, err = conn.Exec( context.Background(),`INSERT INTO comments (id_history_state, comment, date_create_comment)
+	_, err = conn.Exec(context.Background(), `INSERT INTO comments (id_history_state, comment, date_create_comment)
         VALUES ($1, $2, NOW())`,
-        idHistoryState,
-        comment)
+		idHistoryState,
+		comment)
 
-    if err != nil {
-        log.Fatal(err)
-    }
-    return nil
+	if err != nil {
+		log.Fatal(err)
+	}
+	return nil
 }
 
 func DBgetComment(id_stage int) ([]models.Stages, error) {
-	conn:= db.GetDB()
+	conn := db.GetDB()
 	if conn == nil {
 		return nil, errors.New("DB connection is nil")
 	}
-   
-    rows, err := conn.Query( context.Background(),`
+
+	rows, err := conn.Query(context.Background(), `
         SELECT c.*
         FROM comments c
         JOIN history_status hs ON c.id_history_state = hs.id_history_status
         WHERE hs.id_stage = $1
     `, id_stage)
-    if err != nil {
-        log.Fatal(err)
-    }
-    defer rows.Close()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer rows.Close()
 
-    var comments []models.Stages
-    for rows.Next() {
-        var comment models.Stages
-        err = rows.Scan(&comment.Id_comment,
-            &comment.Id_history_state,
-            &comment.Comment,
-			&comment.Data_create,)
+	var comments []models.Stages
+	for rows.Next() {
+		var comment models.Stages
+		err = rows.Scan(&comment.Id_comment,
+			&comment.Id_history_state,
+			&comment.Comment,
+			&comment.Data_create)
 
-        if err != nil {
-            log.Fatal(err)
-        }
-        comments = append(comments, comment)
-    }
-    return comments, nil
+		if err != nil {
+			log.Fatal(err)
+		}
+		comments = append(comments, comment)
+	}
+	return comments, nil
 }
 func DBChengeStatusStage(id_stage int, id_status_stage int, comment string) error {
-	conn:= db.GetDB()
+	conn := db.GetDB()
 	if conn == nil {
 		return errors.New("DB connection is nil")
 	}
-   
-    tx, err := conn.Begin( context.Background(),)
-    if err != nil {
-        return err
-    }
 
-    var id_history_status int
-    err = tx.QueryRow(context.Background(),`INSERT INTO history_status (id_stage, id_status_stage, data_change_status)
+	tx, err := conn.Begin(context.Background())
+	if err != nil {
+		return err
+	}
+
+	var id_history_status int
+	err = tx.QueryRow(context.Background(), `INSERT INTO history_status (id_stage, id_status_stage, data_change_status)
         VALUES ($1, $2, NOW()) RETURNING id_history_status`,
-        id_stage,
-        id_status_stage).Scan(&id_history_status)
+		id_stage,
+		id_status_stage).Scan(&id_history_status)
 
-    if err != nil {
-        tx.Rollback( context.Background())
-        return err
-    }
+	if err != nil {
+		tx.Rollback(context.Background())
+		return err
+	}
 
-    _, err = tx.Exec( context.Background(),`INSERT INTO comments (id_history_state, comment, date_create_comment)
+	_, err = tx.Exec(context.Background(), `INSERT INTO comments (id_history_state, comment, date_create_comment)
         VALUES ($1, $2, NOW())`,
-        id_history_status,
-        comment)
+		id_history_status,
+		comment)
 
-    if err != nil {
-        tx.Rollback(context.Background())
-        return err
-    }
+	if err != nil {
+		tx.Rollback(context.Background())
+		return err
+	}
 
-    return tx.Commit( context.Background(),)
+	return tx.Commit(context.Background())
 }
 func DBdeleteFile(id_files int) error {
 	conn := db.GetDB()
-	
 
-	_, err := conn.Exec( context.Background(),`DELETE FROM files WHERE id_file=$1`, id_files)
+	_, err := conn.Exec(context.Background(), `DELETE FROM files WHERE id_file=$1`, id_files)
 
 	if err != nil {
 		log.Fatal(err)
@@ -526,50 +530,49 @@ func DBdeleteFile(id_files int) error {
 }
 
 func DBdeleteStage(id_stage int) error {
-    conn:= db.GetDB()
+	conn := db.GetDB()
 	if conn == nil {
 		return errors.New("DB connection is nil")
 	}
 
-    tx, err := conn.Begin( context.Background(),)
-    if err != nil {
-        return err
-    }
+	tx, err := conn.Begin(context.Background())
+	if err != nil {
+		return err
+	}
 
-    _, err = tx.Exec( context.Background(),`DELETE FROM history_states WHERE id_stage=$1`, id_stage)
-    if err != nil {
-        tx.Rollback( context.Background(),)
-        return err
-    }
+	_, err = tx.Exec(context.Background(), `DELETE FROM history_states WHERE id_stage=$1`, id_stage)
+	if err != nil {
+		tx.Rollback(context.Background())
+		return err
+	}
 
-    _, err = tx.Exec( context.Background(),`DELETE FROM files WHERE id_stage=$1`, id_stage)
-    if err != nil {
-        tx.Rollback( context.Background(),)
-        return err
-    }
+	_, err = tx.Exec(context.Background(), `DELETE FROM files WHERE id_stage=$1`, id_stage)
+	if err != nil {
+		tx.Rollback(context.Background())
+		return err
+	}
 
-    _, err = tx.Exec( context.Background(),`DELETE FROM stages WHERE id_stage=$1`, id_stage)
-    if err != nil {
-        tx.Rollback( context.Background(),)
-        return err
-    }
+	_, err = tx.Exec(context.Background(), `DELETE FROM stages WHERE id_stage=$1`, id_stage)
+	if err != nil {
+		tx.Rollback(context.Background())
+		return err
+	}
 
-    err = tx.Commit( context.Background(),)
-    if err != nil {
-        return err
-    }
+	err = tx.Commit(context.Background())
+	if err != nil {
+		return err
+	}
 
-    return nil
+	return nil
 }
 
 func DBdeleteComment(id_comment int) error {
-	conn:= db.GetDB()
+	conn := db.GetDB()
 	if conn == nil {
 		return errors.New("DB connection is nil")
 	}
-	
 
-	_, err := conn.Exec( context.Background(),`DELETE FROM comments WHERE id_comment=$1`, id_comment)
+	_, err := conn.Exec(context.Background(), `DELETE FROM comments WHERE id_comment=$1`, id_comment)
 
 	if err != nil {
 		log.Fatal(err)
