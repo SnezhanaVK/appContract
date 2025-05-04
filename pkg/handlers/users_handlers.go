@@ -3,6 +3,10 @@ package handlers
 import (
 	db "appContract/pkg/db/repository"
 	"appContract/pkg/models"
+	"appContract/pkg/service"
+	"appContract/pkg/utils"
+	"fmt"
+	"strings"
 
 	"encoding/json"
 	"net/http"
@@ -115,67 +119,29 @@ func GetUserID(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func GetUserPasswordandEmail(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Invalid request method", http.StatusBadRequest)
-		return
-	}
-	vars := mux.Vars(r)
-	userId := vars["userID"]
-	if userId == "" {
-		http.Error(w, "Invalid user_id", http.StatusBadRequest)
-		return
-	}
-
-	id, err := strconv.Atoi(userId)
-	if err != nil {
-		http.Error(w, "Invalid user_id", http.StatusBadRequest)
-		return
-	}
-
-	users, err := db.DBGetUserPasswordandLogin(id)
-
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	var response []map[string]interface{}
-	userResponse := map[string]interface{}{
-		"login":    users.Login,
-		"password": users.Password,
-	}
-	response = append(response, userResponse)
-
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-}
-
 func PostCreateUser(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Invalid request method", http.StatusBadRequest)
 		return
 	}
+
 	var user models.Users
-	err := json.NewDecoder(r.Body).Decode(&user)
-	if err != nil {
-		http.Error(w, "Invalid request body PostCreateUser", http.StatusBadRequest)
+	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	err = db.DBaddUser(user)
-	if err != nil {
+	// Создаем email sender (реализует EmailSenderInterface)
+	emailSender := utils.NewDefaultEmailSender()
+	if err := service.CreateUser(user, emailSender); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]string{"message": "User created successfully"})
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": "User created successfully. Account credentials sent to email.",
+	})
 }
 
 func PostAddRoleAdmin(w http.ResponseWriter, r *http.Request) {
@@ -344,7 +310,7 @@ func PutUpdateUser(w http.ResponseWriter, r *http.Request) {
 
 func DeleteUser(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodDelete {
-		http.Error(w, "Invalid request method DeleteUser", http.StatusBadRequest)
+		http.Error(w, "Invalid request method", http.StatusBadRequest)
 		return
 	}
 
@@ -354,13 +320,20 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid user_id", http.StatusBadRequest)
 		return
 	}
+
 	err = db.DBdeleteUser(userId)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		// Различаем ошибку "не найден" и другие ошибки
+		if strings.Contains(err.Error(), "not found") {
+			http.Error(w, err.Error(), http.StatusNotFound)
+		} else {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"message": "User deleted successfully"})
-
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": fmt.Sprintf("User with id %d deleted successfully", userId),
+	})
 }

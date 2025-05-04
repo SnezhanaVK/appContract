@@ -7,8 +7,12 @@ type Users struct {
 	Patronymic string `json:"patronymic"`
 	Phone      string `json:"phone"`
 	//Photo      string `json:"photo"`
-	Email    string `json:"email"`
-	Login    string `json:"login"`
+	Email             string `json:"email"`
+	Login             string `json:"login"`
+	PasswordHash      string `json:"-"`
+	Salt              string `json:"-"`
+	PasswordAlgorithm string `json:"-"`
+
 	Password string `json:"password"`
 	Admin    bool   `json:"admin"`
 	Manager  bool   `json:"manager"`

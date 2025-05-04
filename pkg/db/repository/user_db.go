@@ -3,6 +3,7 @@ package db
 import (
 	"appContract/pkg/db"
 	"appContract/pkg/models"
+	"appContract/pkg/utils"
 	"context"
 
 	"encoding/json"
@@ -137,67 +138,52 @@ func DBgetUserID(user_id int) ([]models.Users, error) {
 	return users, nil
 }
 
-func DBGetUserPasswordandLogin(user_id int) (models.Users, error) {
-	conn := db.GetDB()
-	if conn == nil {
-		return models.Users{}, fmt.Errorf("connection error")
-	}
-
-	var user models.Users
-
-	err := conn.QueryRow(context.Background(), `
-		SELECT 
-			login,
-			password
-		FROM users
-		WHERE id_user = $1`, user_id).Scan(
-		&user.Login,
-		&user.Password,
-	)
-	if err != nil {
-		log.Printf("Error getting user password and login: %v", err)
-		return models.Users{}, fmt.Errorf("failed to get user password and login: %v", err)
-	}
-
-	return user, nil
-}
-
-func DBaddUser(user models.Users) error {
+func DBaddUser(user models.Users, password string) error {
 	conn := db.GetDB()
 	if conn == nil {
 		return errors.New("connection error")
 	}
 
-	_, err := conn.Exec(context.Background(), `
-	INSERT INTO users (
-	surname, 
-	username, 
-	patronymic, 
-	phone, 
- 
-	email, 
-	login, 
-	password
+	salt, err := utils.GenerateSalt(16)
+	if err != nil {
+		return fmt.Errorf("failed to generate salt: %v", err)
+	}
 
-	)VALUES (
-		$1,$2,$3,$4,$5,$6,$7
-	)
-	`,
+	hashedPassword, err := utils.HashPassword(password, salt)
+	if err != nil {
+		return fmt.Errorf("failed to hash password: %v", err)
+	}
+
+	_, err = conn.Exec(context.Background(), `
+    INSERT INTO users (
+        surname, 
+        username, 
+        patronymic, 
+        phone, 
+        email, 
+        login, 
+        password_hash,
+        salt,
+        password_algorithm
+    ) VALUES (
+        $1, $2, $3, $4, $5, $6, $7, $8, $9
+    )`,
 		user.Surname,
 		user.Username,
 		user.Patronymic,
 		user.Phone,
-
 		user.Email,
 		user.Login,
-		user.Password,
+		hashedPassword,
+		salt,
+		"bcrypt",
 	)
 
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("Error creating user: %v", err)
+		return err
 	}
 	return nil
-
 }
 
 func DBAddUserRole(user models.Users, roleID int) error {
@@ -394,18 +380,26 @@ func DBchangeUser(user models.Users) error {
 	}
 	return nil
 }
-
 func DBdeleteUser(user_id int) error {
 	conn := db.GetDB()
-
 	if conn == nil {
 		return errors.New("connection error")
 	}
 
-	_, err := conn.Exec(context.Background(), `
-	DELETE FROM users WHERE id_user=$1`, user_id)
+	// Используем ExecContext вместо Exec
+	result, err := conn.Exec(context.Background(), `
+        DELETE FROM users 
+        WHERE id_user = $1`,
+		user_id)
 	if err != nil {
-		log.Fatal(err)
+		return fmt.Errorf("database error: %v", err)
 	}
+
+	// Проверяем, была ли удалена хотя бы одна строка
+	rowsAffected := result.RowsAffected()
+	if rowsAffected == 0 {
+		return fmt.Errorf("user with id %d not found", user_id)
+	}
+
 	return nil
 }
