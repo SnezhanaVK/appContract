@@ -6,13 +6,13 @@ type Users struct {
 	Username   string `json:"username"`
 	Patronymic string `json:"patronymic"`
 	Phone      string `json:"phone"`
-	Photo      string `json:"photo"`
-	Email      string `json:"email"`
-	Login      string `json:"login"`
-	Password   string `json:"password"`
-	Admin      bool   `json:"admin"`
-	Manager    bool   `json:"manager"`
-	Roles      []Role `json:"roles"`
+	//Photo      string `json:"photo"`
+	Email    string `json:"email"`
+	Login    string `json:"login"`
+	Password string `json:"password"`
+	Admin    bool   `json:"admin"`
+	Manager  bool   `json:"manager"`
+	Roles    []Role `json:"roles"`
 
 	//Notification
 	Id_notification_settings      int    `json:"id_notification"`

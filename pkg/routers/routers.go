@@ -36,6 +36,7 @@ func NewRouter() *mux.Router {
 	ContractsAndStageRoutes(router)
 	SortRouters(router)
 	NotificationRoutes(router)
+	PhotoRouters(router)
 
 	// Тестовый эндпоинт
 	router.HandleFunc("/test-notifications", handlers.TestNotifications).Methods("GET")

@@ -71,16 +71,30 @@ func SetupDatabase() error {
 		username VARCHAR(255) NOT NULL,
 		patronymic VARCHAR(255) NOT NULL,
 		phone VARCHAR(20) NOT NULL,
-		photo VARCHAR(255) NOT NULL,
 		email VARCHAR(255) NOT NULL,
 		login VARCHAR(255) NOT NULL unique,
-		password VARCHAR(255) NOT NULL
+		password VARCHAR(255) NOT NULL,
+		Constraint unique_email UNIQUE (email),
+		Constraint unique_login UNIQUE (login)
 
 	)`)
 		if err != nil {
 			log.Fatal("Error users creating table : ", err)
 		}
 		fmt.Println("Table users created successfully")
+
+		_, err = tx.Exec(context.Background(), `CREATE TABLE IF NOT EXISTS user_photos (
+			id_photo SERIAL PRIMARY KEY,
+			data BYTEA NOT NULL,
+			type VARCHAR(50) NOT NULL,
+			id_user int not null unique,
+			Constraint fk_user_id FOREIGN KEY (id_user) REFERENCES users(id_user),
+			created_at TIMESTAMP DEFAULT NOW())`)
+		if err != nil {
+			return fmt.Errorf("Error user_photos creating table: %v", err)
+		}
+		fmt.Println("Table user_photos created successfully")
+
 		_, err = tx.Exec(context.Background(), `CREATE TABLE if not exists user_by_role (
 		user_by_role SERIAL PRIMARY KEY,
 		id_user int NOT NULL,

@@ -57,9 +57,9 @@ func GetAllUsers(w http.ResponseWriter, r *http.Request) {
 			Username:   user.Username,
 			Patronymic: user.Patronymic,
 			Phone:      user.Phone,
-			Photo:      user.Photo,
-			Email:      user.Email,
-			Roles:      roles,
+
+			Email: user.Email,
+			Roles: roles,
 		})
 	}
 
@@ -102,8 +102,8 @@ func GetUserID(w http.ResponseWriter, r *http.Request) {
 			"username":   user.Username,
 			"patronymic": user.Patronymic,
 			"phone":      user.Phone,
-			"photo":      user.Photo,
-			"email":      user.Email,
+
+			"email": user.Email,
 		}
 		response = append(response, userResponse)
 	}

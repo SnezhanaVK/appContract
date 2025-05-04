@@ -23,7 +23,7 @@ func DBgetUserAll() ([]models.Users, error) {
         u.username, 
         u.patronymic, 
         u.phone, 
-        u.photo, 
+       
         u.email, 
         r.id_role, 
         r.name_role 
@@ -50,7 +50,7 @@ func DBgetUserAll() ([]models.Users, error) {
 			&user.Username,
 			&user.Patronymic,
 			&user.Phone,
-			&user.Photo,
+
 			&user.Email,
 			&role.Id_role,
 			&role.Name_role,
@@ -92,7 +92,7 @@ func DBgetUserID(user_id int) ([]models.Users, error) {
             u.username,
             u.patronymic,
             u.phone,
-            u.photo,
+           
             u.email,
             u.login,
             JSON_AGG(JSON_BUILD_OBJECT('id_role', r.id_role, 'name_role', r.name_role)) AS roles
@@ -118,7 +118,7 @@ func DBgetUserID(user_id int) ([]models.Users, error) {
 			&user.Username,
 			&user.Patronymic,
 			&user.Phone,
-			&user.Photo,
+
 			&user.Email,
 			&user.Login,
 			&rolesJSON,
@@ -174,20 +174,20 @@ func DBaddUser(user models.Users) error {
 	username, 
 	patronymic, 
 	phone, 
-	photo, 
+ 
 	email, 
 	login, 
 	password
 
 	)VALUES (
-		$1,$2,$3,$4,$5,$6,$7,$8
+		$1,$2,$3,$4,$5,$6,$7
 	)
 	`,
 		user.Surname,
 		user.Username,
 		user.Patronymic,
 		user.Phone,
-		user.Photo,
+
 		user.Email,
 		user.Login,
 		user.Password,
@@ -373,17 +373,17 @@ func DBchangeUser(user models.Users) error {
 	username=$2,
 	patronymic=$3,
 	phone=$4,
-	photo=$5,
-	email=$6,
-	login=$7,
-	password=$8
-	WHERE id_user=$9
+	
+	email=$5,
+	login=$6,
+	password=$7
+	WHERE id_user=$8
 	`,
 		user.Surname,
 		user.Username,
 		user.Patronymic,
 		user.Phone,
-		user.Photo,
+
 		user.Email,
 		user.Login,
 		user.Password,
