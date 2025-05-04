@@ -28,20 +28,22 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var user *models.Users
-	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
+	var creds struct {
+		Login    string `json:"login"`
+		Password string `json:"password"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&creds); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	login := user.Login
-	password := user.Password
-	if login == "" || password == "" {
+	if creds.Login == "" || creds.Password == "" {
 		http.Error(w, "Login and password are required", http.StatusBadRequest)
 		return
 	}
 
-	authUser, err := db.Authorize(login, password)
+	authUser, err := db.Authorize(creds.Login, creds.Password)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
@@ -69,11 +71,11 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		Expires:  time.Now().Add(72 * time.Hour),
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   true, // В production должно быть true
+		Secure:   true,
 		SameSite: http.SameSiteLaxMode,
 	})
 
-	// Отправляем ответ с остальными данными пользователя
+	// Отправляем ответ
 	response := AuthResponse{
 		Id_user: authUser.Id_user,
 		Admin:   authUser.Admin,
@@ -86,39 +88,39 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	}
 }
 func VerificationToken(w http.ResponseWriter, r *http.Request) {
-    // Получаем токен из куки
-    cookie, err := r.Cookie("token")
-    if err != nil {
-        if err == http.ErrNoCookie {
-            respondWithBool(w, false)
-            return
-        }
-        respondWithBool(w, false)
-        return
-    }
+	// Получаем токен из куки
+	cookie, err := r.Cookie("token")
+	if err != nil {
+		if err == http.ErrNoCookie {
+			respondWithBool(w, false)
+			return
+		}
+		respondWithBool(w, false)
+		return
+	}
 
-    tokenString := cookie.Value
+	tokenString := cookie.Value
 
-    // Парсинг токена
-    token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-        if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-            return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-        }
-        return jwtKey, nil
-    })
+	// Парсинг токена
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return jwtKey, nil
+	})
 
-    if err != nil || !token.Valid {
-        respondWithBool(w, false)
-        return
-    }
+	if err != nil || !token.Valid {
+		respondWithBool(w, false)
+		return
+	}
 
-    // Если токен валиден
-    respondWithBool(w, true)
+	// Если токен валиден
+	respondWithBool(w, true)
 }
 
 func respondWithBool(w http.ResponseWriter, result bool) {
-    w.Header().Set("Content-Type", "application/json")
-    json.NewEncoder(w).Encode(map[string]bool{"valid": result})
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]bool{"valid": result})
 }
 func Logout(w http.ResponseWriter, r *http.Request) {
 	// Создаем куку с таким же именем ("token"), но с истекшим сроком действия
@@ -126,10 +128,10 @@ func Logout(w http.ResponseWriter, r *http.Request) {
 		Name:     "token",
 		Value:    "",
 		Path:     "/",
-		Expires:  time.Unix(0, 0),  // Дата в прошлом (мгновенно истекает)
-		MaxAge:   -1,               // Немедленное удаление куки
+		Expires:  time.Unix(0, 0), // Дата в прошлом (мгновенно истекает)
+		MaxAge:   -1,              // Немедленное удаление куки
 		HttpOnly: true,
-		Secure:   true,             // Должно совпадать с настройками при логине
+		Secure:   true, // Должно совпадать с настройками при логине
 		SameSite: http.SameSiteLaxMode,
 	})
 
@@ -160,9 +162,9 @@ func PutForgotPassword(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Проверяем существование пользователя
-	_, err := db.GetUser(authRequest.Email)
+	_, err := db.GetUserByEmail(authRequest.Email) // Нужно реализовать эту функцию
 	if err != nil {
-		if err.Error() == "User not found" {
+		if err.Error() == "user not found" {
 			http.Error(w, "User not found", http.StatusNotFound)
 		} else {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -170,14 +172,16 @@ func PutForgotPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Передаем email из запроса, а не user.Login!
+	// Обновляем пароль
 	if err := db.ChangePassword(authRequest.Email, authRequest.Password); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"message": "Password updated successfully"})
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": "Password updated successfully",
+	})
 }
 
 func GetUsers(w http.ResponseWriter, r *http.Request) {

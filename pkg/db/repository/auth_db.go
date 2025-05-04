@@ -3,76 +3,116 @@ package db
 import (
 	db "appContract/pkg/db"
 	"appContract/pkg/models"
+	"appContract/pkg/utils"
 	"context"
 	"database/sql"
-	"encoding/json"
-	"fmt"
-
-	//"encoding/json"
 	"errors"
-	//"fmt"
+	"fmt"
 	"log"
 
 	"github.com/jackc/pgx"
 )
 
-// Изменения в SQL-запросе
 func Authorize(login string, password string) (*models.Users, error) {
-    conn := db.GetDB()
-    if conn == nil {
-        return nil, errors.New("connection error")
-    }
+	conn := db.GetDB()
+	if conn == nil {
+		return nil, errors.New("connection error")
+	}
 
-    query := `
+	// Основной запрос для получения пользователя
+	userQuery := `
         SELECT 
-            u.id_user,
-            u.email,
-            u.login,
-            u.password,
-            COALESCE(json_agg(json_build_object(
-                'id_role', r.id_role, 
-                'name_role', r.name_role
-            )) FILTER (WHERE r.id_role IS NOT NULL), '[]'::json) AS roles
-        FROM users u
-        LEFT JOIN user_by_role ubr ON u.id_user = ubr.id_user
-        LEFT JOIN roles r ON ubr.id_role = r.id_role
-        WHERE u.login = $1 AND u.password = $2
-        GROUP BY u.id_user
+            id_user,
+            surname,
+            username,
+            patronymic,
+            phone,
+            email,
+            login,
+            password_hash,
+            salt
+        FROM users 
+        WHERE login = $1
     `
 
-    var user models.Users
-    var rolesJSON []byte
+	var user models.Users
+	var passwordHash string
+	var salt string
 
-    err := conn.QueryRow(context.Background(),query, login, password).Scan(
-        &user.Id_user,
-        &user.Email,
-        &user.Login,
-        &user.Password,
-        &rolesJSON,
-    )
+	// Получаем основные данные пользователя
+	err := conn.QueryRow(context.Background(), userQuery, login).Scan(
+		&user.Id_user,
+		&user.Surname,
+		&user.Username,
+		&user.Patronymic,
+		&user.Phone,
+		&user.Email,
+		&user.Login,
+		&passwordHash,
+		&salt,
+	)
 
-    if err != nil {
-        if err == pgx.ErrNoRows {
-            return nil, errors.New("user not found")
-        }
-        return nil, err
-    }
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, errors.New("user not found")
+		}
+		return nil, err
+	}
 
-    // Декодируем роли
-    if err := json.Unmarshal(rolesJSON, &user.Roles); err != nil {
-        return nil, fmt.Errorf("failed to decode roles: %v", err)
-    }
+	// Проверяем пароль
+	if !utils.VerifyPassword(passwordHash, password, salt) {
+		return nil, errors.New("invalid password")
+	}
 
-    // Заполняем первую роль для совместимости
-    if len(user.Roles) > 0 {
-        user.Id_role = user.Roles[0].Id_role
-        user.Name_role = user.Roles[0].Name_role
-    } else {
-        user.Id_role = 0
-        user.Name_role = ""
-    }
+	// Отдельный запрос для получения ролей
+	rolesQuery := `
+        SELECT r.id_role, r.name_role 
+        FROM user_by_role ubr
+        JOIN roles r ON ubr.id_role = r.id_role
+        WHERE ubr.id_user = $1
+    `
 
-    return &user, nil
+	rows, err := conn.Query(context.Background(), rolesQuery, user.Id_user)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get roles: %v", err)
+	}
+	defer rows.Close()
+
+	var roles []models.Role
+	for rows.Next() {
+		var role models.Role
+		if err := rows.Scan(&role.Id_role, &role.Name_role); err != nil {
+			return nil, fmt.Errorf("failed to scan role: %v", err)
+		}
+		roles = append(roles, role)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("roles query error: %v", err)
+	}
+
+	user.Roles = roles
+
+	// Заполняем первую роль для совместимости
+	if len(user.Roles) > 0 {
+		user.Id_role = user.Roles[0].Id_role
+		user.Name_role = user.Roles[0].Name_role
+	} else {
+		user.Id_role = 0
+		user.Name_role = ""
+	}
+
+	// Определяем флаги администратора и менеджера
+	for _, role := range user.Roles {
+		switch role.Id_role {
+		case 1: // Предполагаем, что 1 - это admin
+			user.Admin = true
+		case 2: // Предполагаем, что 2 - это manager
+			user.Manager = true
+		}
+	}
+
+	return &user, nil
 }
 
 func GetAddmin(id int) (bool, error) {
@@ -82,7 +122,7 @@ func GetAddmin(id int) (bool, error) {
 	}
 
 	var isAdmin sql.NullBool
-	err := conn.QueryRow( context.Background(),`SELECT admin FROM users WHERE id_user=$1`, id).Scan(&isAdmin)
+	err := conn.QueryRow(context.Background(), `SELECT admin FROM users WHERE id_user=$1`, id).Scan(&isAdmin)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return false, errors.New("user not found")
@@ -97,27 +137,44 @@ func GetAddmin(id int) (bool, error) {
 	return isAdmin.Bool, nil
 }
 
-func ChangePassword(email string, password string) error {
-	if password == "" {
+func ChangePassword(email string, newPassword string) error {
+	if newPassword == "" {
 		return errors.New("password is required")
 	}
+
 	conn := db.GetDB()
 	if conn == nil {
 		return errors.New("connection error")
 	}
 
-	result, err := conn.Exec( context.Background(),
-		`UPDATE users SET password = $1 WHERE email = $2`,
-		password,
-		email,
-	)
+	// Генерируем новую соль и хеш
+	salt, err := utils.GenerateSalt(16)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to generate salt: %v", err)
 	}
 
-	// Проверяем, была ли обновлена хотя бы одна строка
-	rowsAffected := result.RowsAffected()
-	if rowsAffected == 0 {
+	hashedPassword, err := utils.HashPassword(newPassword, salt)
+	if err != nil {
+		return fmt.Errorf("failed to hash password: %v", err)
+	}
+
+	// Обновляем password_hash и salt
+	result, err := conn.Exec(context.Background(),
+		`UPDATE users 
+         SET password_hash = $1, 
+             salt = $2,
+             password_updated_at = CURRENT_TIMESTAMP
+         WHERE email = $3`,
+		hashedPassword,
+		salt,
+		email,
+	)
+
+	if err != nil {
+		return fmt.Errorf("database error: %v", err)
+	}
+
+	if rowsAffected := result.RowsAffected(); rowsAffected == 0 {
 		return errors.New("user not found")
 	}
 
@@ -132,7 +189,7 @@ func GetUser(email string) (models.Users, error) {
 
 	var user models.Users
 
-	err := conn.QueryRow( context.Background(),`SELECT id_user, email, login, password FROM users WHERE email = $1`, email).Scan(
+	err := conn.QueryRow(context.Background(), `SELECT id_user, email, login, password FROM users WHERE email = $1`, email).Scan(
 		&user.Id_user,
 		&user.Email,
 		&user.Login,
@@ -159,11 +216,10 @@ func GetUserByEmail(email string) (models.Users, error) {
 
 	var user models.Users
 
-	err := conn.QueryRow( context.Background(),`SELECT id_user, email, login, password FROM users WHERE email = $1`, email).Scan(
+	err := conn.QueryRow(context.Background(), `SELECT id_user, email, login  FROM users WHERE email = $1`, email).Scan(
 		&user.Id_user,
 		&user.Email,
 		&user.Login,
-		&user.Password,
 	)
 
 	if err != nil {
