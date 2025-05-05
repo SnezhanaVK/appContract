@@ -189,11 +189,10 @@ func GetUser(email string) (models.Users, error) {
 
 	var user models.Users
 
-	err := conn.QueryRow(context.Background(), `SELECT id_user, email, login, password FROM users WHERE email = $1`, email).Scan(
+	err := conn.QueryRow(context.Background(), `SELECT id_user, email, login FROM users WHERE email = $1`, email).Scan(
 		&user.Id_user,
 		&user.Email,
 		&user.Login,
-		&user.Password,
 	)
 
 	if err != nil {

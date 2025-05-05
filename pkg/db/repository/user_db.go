@@ -24,7 +24,8 @@ func DBgetUserAll() ([]models.Users, error) {
         u.username, 
         u.patronymic, 
         u.phone, 
-        u.email, 
+        u.email,
+		u.login, 
         r.id_role, 
         r.name_role 
     FROM 
@@ -53,6 +54,7 @@ func DBgetUserAll() ([]models.Users, error) {
 			&user.Patronymic,
 			&user.Phone,
 			&user.Email,
+			&user.Login,
 			&roleID,
 			&roleName,
 		)
@@ -105,9 +107,8 @@ func DBgetUserID(user_id int) ([]models.Users, error) {
             u.username,
             u.patronymic,
             u.phone,
-           
-            u.email,
-            u.login,
+            u.email,  
+            u.login,  
             JSON_AGG(JSON_BUILD_OBJECT('id_role', r.id_role, 'name_role', r.name_role)) AS roles
         FROM users u
         LEFT JOIN user_by_role ubr ON u.id_user = ubr.id_user
@@ -131,9 +132,8 @@ func DBgetUserID(user_id int) ([]models.Users, error) {
 			&user.Username,
 			&user.Patronymic,
 			&user.Phone,
-
-			&user.Email,
-			&user.Login,
+			&user.Email, // Добавлено
+			&user.Login, // Убедитесь, что это поле есть в модели
 			&rolesJSON,
 		)
 		if err != nil {
@@ -362,34 +362,39 @@ func DBgetUserRoles(user_id int) ([]models.Role, error) {
 func DBchangeUser(user models.Users) error {
 	conn := db.GetDB()
 	if conn == nil {
-		return errors.New("connection error")
+		return errors.New("database connection error")
 	}
 
-	_, err := conn.Exec(context.Background(), `
-	UPDATE users SET 
-	surname=$1,
-	username=$2,
-	patronymic=$3,
-	phone=$4,
-	
-	email=$5,
-	login=$6,
-	password=$7
-	WHERE id_user=$8
-	`,
+	// Проверяем, что ID пользователя указан
+	if user.Id_user == 0 {
+		return errors.New("user ID is required")
+	}
+
+	result, err := conn.Exec(context.Background(), `
+    UPDATE users SET 
+        surname = COALESCE(NULLIF($1, ''), surname),
+        username = COALESCE(NULLIF($2, ''), username),
+        patronymic = COALESCE(NULLIF($3, ''), patronymic),
+        phone = COALESCE(NULLIF($4, ''), phone)
+   	    WHERE id_user = $5
+    `,
 		user.Surname,
 		user.Username,
 		user.Patronymic,
 		user.Phone,
-
-		user.Email,
-		user.Login,
-		user.Password,
 		user.Id_user,
 	)
+
 	if err != nil {
-		log.Fatal(err)
+		return fmt.Errorf("failed to update user: %w", err)
 	}
+
+	// Проверяем, были ли сделаны изменения
+	rowsAffected := result.RowsAffected()
+	if rowsAffected == 0 {
+		return errors.New("no rows were updated - user not found or no changes made")
+	}
+
 	return nil
 }
 func DBdeleteUser(user_id int) error {

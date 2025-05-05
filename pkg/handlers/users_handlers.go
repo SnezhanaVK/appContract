@@ -39,8 +39,8 @@ func GetAllUsers(w http.ResponseWriter, r *http.Request) {
 		Username   string         `json:"username"`
 		Patronymic string         `json:"patronymic,omitempty"`
 		Phone      string         `json:"phone"`
-		Photo      string         `json:"photo,omitempty"`
 		Email      string         `json:"email"`
+		Login      string         `json:"login"`
 		Roles      []RoleResponse `json:"roles"`
 	}
 
@@ -61,9 +61,9 @@ func GetAllUsers(w http.ResponseWriter, r *http.Request) {
 			Username:   user.Username,
 			Patronymic: user.Patronymic,
 			Phone:      user.Phone,
-
-			Email: user.Email,
-			Roles: roles,
+			Email:      user.Email,
+			Login:      user.Login,
+			Roles:      roles,
 		})
 	}
 
@@ -106,6 +106,7 @@ func GetUserID(w http.ResponseWriter, r *http.Request) {
 			"username":   user.Username,
 			"patronymic": user.Patronymic,
 			"phone":      user.Phone,
+			"login":      user.Login,
 
 			"email": user.Email,
 		}
@@ -289,23 +290,55 @@ func GetUserRoles(w http.ResponseWriter, r *http.Request) {
 }
 
 func PutUpdateUser(w http.ResponseWriter, r *http.Request) {
+	// Проверка метода
 	if r.Method != http.MethodPut {
-		http.Error(w, "Invalid request method PutUpdateUser", http.StatusBadRequest)
+		http.Error(w, "Invalid request method, PUT expected", http.StatusMethodNotAllowed)
 		return
 	}
+
+	// Получаем userID из URL
+	vars := mux.Vars(r)
+	userIDStr := vars["userID"]
+	if userIDStr == "" {
+		http.Error(w, "User ID is required in URL", http.StatusBadRequest)
+		return
+	}
+
+	// Конвертируем userID в число
+	userID, err := strconv.Atoi(userIDStr)
+	if err != nil {
+		http.Error(w, "Invalid user ID format", http.StatusBadRequest)
+		return
+	}
+
+	// Декодируем JSON тело запроса
 	var user models.Users
-	err := json.NewDecoder(r.Body).Decode(&user)
-	if err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
+		http.Error(w, fmt.Sprintf("Invalid request body: %v", err), http.StatusBadRequest)
 		return
 	}
-	err = db.DBchangeUser(user)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+
+	// Устанавливаем ID из URL (переопределяем, если был указан в JSON)
+	user.Id_user = userID
+
+	// Вызываем функцию обновления
+	if err := db.DBchangeUser(user); err != nil {
+		if strings.Contains(err.Error(), "no rows were updated") {
+			http.Error(w, err.Error(), http.StatusNotFound)
+		} else {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
 		return
 	}
+
+	// Успешный ответ
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"message": "User updated successfully"})
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"message": "User updated successfully",
+		"user_id": userID,
+	})
 }
 
 func DeleteUser(w http.ResponseWriter, r *http.Request) {
