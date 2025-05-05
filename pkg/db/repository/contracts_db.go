@@ -6,16 +6,16 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 )
 
-//доделан
 func DBgetContractAll() ([]models.Contracts, error) {
-    conn:= db.GetDB()
-    if conn==nil{
-        return nil, errors.New("connection error")
-    }
+	conn := db.GetDB()
+	if conn == nil {
+		return nil, errors.New("connection error")
+	}
 
-    rows, err := conn.Query( context.Background(),`
+	rows, err := conn.Query(context.Background(), `
         SELECT 
     c.id_contract,
     c.name_contract,
@@ -55,59 +55,60 @@ GROUP BY
     c.id_counterparty, cp.name_counterparty, c.id_status_contract, sc.name_status_contract
 ORDER BY c.id_contract
     `)
-    
-    if err != nil {
-        return nil, err
-    }
-    defer rows.Close()
 
-    var contracts []models.Contracts
-    for rows.Next() {
-        var contract models.Contracts
-        var tegsJSON []byte
-        
-        err = rows.Scan(
-            &contract.Id_contract,
-            &contract.Name_contract,
-            &contract.Id_user,
-            &contract.Surname,
-            &contract.Username,
-            &contract.Patronymic,
-            &contract.Date_conclusion,
-            &contract.Date_end,
-            &contract.Date_contract_create,
-            &contract.Id_type,
-            &contract.Name_type,
-            &contract.Id_counterparty,
-            &contract.Name_counterparty,
-            &contract.Id_status_contract,
-            &contract.Name_status_contract,
-            &tegsJSON,
-        )
-        
-        if err != nil {
-            return nil, err
-        }
-        
-        // Декодируем JSON с тегами
-        if err := json.Unmarshal(tegsJSON, &contract.Tegs); err != nil {
-            return nil, err
-        }
-        
-        contracts = append(contracts, contract)
-    }
-    
-    return contracts, nil
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var contracts []models.Contracts
+	for rows.Next() {
+		var contract models.Contracts
+		var tegsJSON []byte
+
+		err = rows.Scan(
+			&contract.Id_contract,
+			&contract.Name_contract,
+			&contract.Id_user,
+			&contract.Surname,
+			&contract.Username,
+			&contract.Patronymic,
+			&contract.Date_conclusion,
+			&contract.Date_end,
+			&contract.Date_contract_create,
+			&contract.Id_type,
+			&contract.Name_type,
+			&contract.Id_counterparty,
+			&contract.Name_counterparty,
+			&contract.Id_status_contract,
+			&contract.Name_status_contract,
+			&tegsJSON,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		// Декодируем JSON с тегами
+		if err := json.Unmarshal(tegsJSON, &contract.Tegs); err != nil {
+			return nil, err
+		}
+
+		contracts = append(contracts, contract)
+	}
+
+	return contracts, nil
 }
-//Sort 
-func DBgetContractByType(idType int) ([]models.Contracts, error) {
-    conn := db.GetDB()
-    if conn == nil {
-        return nil, errors.New("connection error")
-    }
 
-    // Модифицированный SQL-запрос с агрегацией тегов
-    rows, err := conn.Query( context.Background(),`
+// Sort
+func DBgetContractByType(idType int) ([]models.Contracts, error) {
+	conn := db.GetDB()
+	if conn == nil {
+		return nil, errors.New("connection error")
+	}
+
+	// Модифицированный SQL-запрос с агрегацией тегов
+	rows, err := conn.Query(context.Background(), `
         SELECT 
             c.id_contract,
             c.name_contract,
@@ -147,56 +148,56 @@ func DBgetContractByType(idType int) ([]models.Contracts, error) {
             c.id_counterparty, cp.name_counterparty, c.id_status_contract, sc.name_status_contract
         ORDER BY c.id_contract
     `, idType)
-    
-    if err != nil {
-        return nil, err
-    }
-    defer rows.Close()
 
-    var contracts []models.Contracts
-    for rows.Next() {
-        var contract models.Contracts
-        var tegsJSON []byte
-        err = rows.Scan(
-            &contract.Id_contract,
-            &contract.Name_contract,
-            &contract.Id_user,
-            &contract.Surname,
-            &contract.Username,
-            &contract.Patronymic,
-            &contract.Date_conclusion,
-            &contract.Date_end,
-            &contract.Date_contract_create,
-            &contract.Id_type,
-            &contract.Name_type,
-            &contract.Id_counterparty,
-            &contract.Name_counterparty,
-            &contract.Id_status_contract,
-            &contract.Name_status_contract,
-            &tegsJSON, // Сканируем JSON с тегами
-        )
-        
-        if err != nil {
-            return nil, err
-        }
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
 
-        // Декодируем JSON в поле Tegs структуры Contracts
-        if err := json.Unmarshal(tegsJSON, &contract.Tegs); err != nil {
-            return nil, err
-        }
+	var contracts []models.Contracts
+	for rows.Next() {
+		var contract models.Contracts
+		var tegsJSON []byte
+		err = rows.Scan(
+			&contract.Id_contract,
+			&contract.Name_contract,
+			&contract.Id_user,
+			&contract.Surname,
+			&contract.Username,
+			&contract.Patronymic,
+			&contract.Date_conclusion,
+			&contract.Date_end,
+			&contract.Date_contract_create,
+			&contract.Id_type,
+			&contract.Name_type,
+			&contract.Id_counterparty,
+			&contract.Name_counterparty,
+			&contract.Id_status_contract,
+			&contract.Name_status_contract,
+			&tegsJSON, // Сканируем JSON с тегами
+		)
 
-        contracts = append(contracts, contract)
-    }
+		if err != nil {
+			return nil, err
+		}
 
-    return contracts, nil
+		// Декодируем JSON в поле Tegs структуры Contracts
+		if err := json.Unmarshal(tegsJSON, &contract.Tegs); err != nil {
+			return nil, err
+		}
+
+		contracts = append(contracts, contract)
+	}
+
+	return contracts, nil
 }
 func DBgetContractsByDateCreate(date models.Date) ([]models.Contracts, error) {
-    conn := db.GetDB()
-    if conn == nil {
-        return nil, errors.New("connection error")
-    }
+	conn := db.GetDB()
+	if conn == nil {
+		return nil, errors.New("connection error")
+	}
 
-    rows, err := conn.Query( context.Background(),`
+	rows, err := conn.Query(context.Background(), `
         SELECT 
             c.id_contract,
             c.name_contract,
@@ -235,57 +236,57 @@ func DBgetContractsByDateCreate(date models.Date) ([]models.Contracts, error) {
             c.id_counterparty, cp.name_counterparty, c.id_status_contract, sc.name_status_contract
         ORDER BY c.date_create_contract
     `, date.Date_start, date.Date_end)
-    
-    if err != nil {
-        return nil, err
-    }
-    defer rows.Close()
 
-    var contracts []models.Contracts
-    for rows.Next() {
-        var contract models.Contracts
-        var tegsJSON []byte
-        
-        err = rows.Scan(
-            &contract.Id_contract,
-            &contract.Name_contract,
-            &contract.Id_user,
-            &contract.Surname,
-            &contract.Username,
-            &contract.Patronymic,
-            &contract.Date_conclusion,
-            &contract.Date_contract_create,
-            &contract.Date_end,
-            &contract.Id_type,
-            &contract.Name_type,
-            &contract.Id_counterparty,
-            &contract.Name_counterparty,
-            &contract.Id_status_contract,
-            &contract.Name_status_contract,
-            &tegsJSON,
-        )
-        
-        if err != nil {
-            return nil, err
-        }
-        
-        // Декодируем JSON с тегами
-        if err := json.Unmarshal(tegsJSON, &contract.Tegs); err != nil {
-            return nil, err
-        }
-        
-        contracts = append(contracts, contract)
-    }
-    
-    return contracts, nil
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var contracts []models.Contracts
+	for rows.Next() {
+		var contract models.Contracts
+		var tegsJSON []byte
+
+		err = rows.Scan(
+			&contract.Id_contract,
+			&contract.Name_contract,
+			&contract.Id_user,
+			&contract.Surname,
+			&contract.Username,
+			&contract.Patronymic,
+			&contract.Date_conclusion,
+			&contract.Date_contract_create,
+			&contract.Date_end,
+			&contract.Id_type,
+			&contract.Name_type,
+			&contract.Id_counterparty,
+			&contract.Name_counterparty,
+			&contract.Id_status_contract,
+			&contract.Name_status_contract,
+			&tegsJSON,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		// Декодируем JSON с тегами
+		if err := json.Unmarshal(tegsJSON, &contract.Tegs); err != nil {
+			return nil, err
+		}
+
+		contracts = append(contracts, contract)
+	}
+
+	return contracts, nil
 }
 func DBgetContractsByTegs() ([]models.Contracts, error) {
-    conn := db.GetDB()
-    if conn == nil {
-        return nil, errors.New("DB connection is nil")
-    }
+	conn := db.GetDB()
+	if conn == nil {
+		return nil, errors.New("DB connection is nil")
+	}
 
-    rows, err := conn.Query( context.Background(),`
+	rows, err := conn.Query(context.Background(), `
         SELECT 
             c.id_contract,
             c.name_contract,
@@ -324,58 +325,58 @@ func DBgetContractsByTegs() ([]models.Contracts, error) {
             c.id_counterparty, cp.name_counterparty, c.id_status_contract, sc.name_status_contract
         ORDER BY c.id_contract
     `)
-    
-    if err != nil {
-        return nil, err
-    }
-    defer rows.Close()
 
-    var contracts []models.Contracts
-    for rows.Next() {
-        var contract models.Contracts
-        var tegsJSON []byte
-        
-        err = rows.Scan(
-            &contract.Id_contract,
-            &contract.Name_contract,
-            &contract.Id_user,
-            &contract.Surname,
-            &contract.Username,
-            &contract.Patronymic,
-            &contract.Date_conclusion,
-            &contract.Date_contract_create,
-            &contract.Date_end,
-            &contract.Id_type,
-            &contract.Name_type,
-            &contract.Id_counterparty,
-            &contract.Name_counterparty,
-            &contract.Id_status_contract,
-            &contract.Name_status_contract,
-            &tegsJSON, // Сканируем JSON с тегами
-        )
-        
-        if err != nil {
-            return nil, err
-        }
-        
-        // Декодируем JSON в структуру тегов
-        if err := json.Unmarshal(tegsJSON, &contract.Tegs); err != nil {
-            return nil, err
-        }
-        
-        contracts = append(contracts, contract)
-    }
-    
-    return contracts, nil
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var contracts []models.Contracts
+	for rows.Next() {
+		var contract models.Contracts
+		var tegsJSON []byte
+
+		err = rows.Scan(
+			&contract.Id_contract,
+			&contract.Name_contract,
+			&contract.Id_user,
+			&contract.Surname,
+			&contract.Username,
+			&contract.Patronymic,
+			&contract.Date_conclusion,
+			&contract.Date_contract_create,
+			&contract.Date_end,
+			&contract.Id_type,
+			&contract.Name_type,
+			&contract.Id_counterparty,
+			&contract.Name_counterparty,
+			&contract.Id_status_contract,
+			&contract.Name_status_contract,
+			&tegsJSON, // Сканируем JSON с тегами
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		// Декодируем JSON в структуру тегов
+		if err := json.Unmarshal(tegsJSON, &contract.Tegs); err != nil {
+			return nil, err
+		}
+
+		contracts = append(contracts, contract)
+	}
+
+	return contracts, nil
 }
 
 func DBgetContractsByStatus() ([]models.Contracts, error) {
-    conn := db.GetDB()
-    if conn == nil {
-        return nil, errors.New("connection error")
-    }
+	conn := db.GetDB()
+	if conn == nil {
+		return nil, errors.New("connection error")
+	}
 
-    rows, err := conn.Query( context.Background(),`
+	rows, err := conn.Query(context.Background(), `
         SELECT 
             c.id_contract,
             c.name_contract,
@@ -414,57 +415,56 @@ func DBgetContractsByStatus() ([]models.Contracts, error) {
             c.id_counterparty, cp.name_counterparty, c.id_status_contract, sc.name_status_contract
         ORDER BY c.id_status_contract
     `)
-    
-    if err != nil {
-        return nil, err
-    }
-    defer rows.Close()
 
-    var contracts []models.Contracts
-    for rows.Next() {
-        var contract models.Contracts
-        var tegsJSON []byte
-        err = rows.Scan(
-            &contract.Id_contract,
-            &contract.Name_contract,
-            &contract.Id_user,
-            &contract.Surname,
-            &contract.Username,
-            &contract.Patronymic,
-            &contract.Date_conclusion,
-            &contract.Date_contract_create,
-            &contract.Date_end,
-            &contract.Id_type,
-            &contract.Name_type,
-            &contract.Id_counterparty,
-            &contract.Name_counterparty,
-            &contract.Id_status_contract,
-            &contract.Name_status_contract,
-            &tegsJSON,
-        )
-        
-        if err != nil {
-            return nil, err
-        }
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
 
-        // Декодируем JSON с тегами
-        if err := json.Unmarshal(tegsJSON, &contract.Tegs); err != nil {
-            return nil, err
-        }
+	var contracts []models.Contracts
+	for rows.Next() {
+		var contract models.Contracts
+		var tegsJSON []byte
+		err = rows.Scan(
+			&contract.Id_contract,
+			&contract.Name_contract,
+			&contract.Id_user,
+			&contract.Surname,
+			&contract.Username,
+			&contract.Patronymic,
+			&contract.Date_conclusion,
+			&contract.Date_contract_create,
+			&contract.Date_end,
+			&contract.Id_type,
+			&contract.Name_type,
+			&contract.Id_counterparty,
+			&contract.Name_counterparty,
+			&contract.Id_status_contract,
+			&contract.Name_status_contract,
+			&tegsJSON,
+		)
 
-        contracts = append(contracts, contract)
-    }
+		if err != nil {
+			return nil, err
+		}
 
-    return contracts, nil
+		// Декодируем JSON с тегами
+		if err := json.Unmarshal(tegsJSON, &contract.Tegs); err != nil {
+			return nil, err
+		}
+
+		contracts = append(contracts, contract)
+	}
+
+	return contracts, nil
 }
 
-//доделан
 func DBgetContractID(contractID int) ([]models.Contracts, error) {
-    conn:= db.GetDB()
-    if conn==nil{
-        return nil, errors.New("connection error")
-    }
-    rows, err := conn.Query( context.Background(),`
+	conn := db.GetDB()
+	if conn == nil {
+		return nil, errors.New("connection error")
+	}
+	rows, err := conn.Query(context.Background(), `
         SELECT 
             c.id_contract,
             c.name_contract,
@@ -498,59 +498,59 @@ func DBgetContractID(contractID int) ([]models.Contracts, error) {
             c.id_contract, c.name_contract, c.id_user, u.surname, u.username, u.patronymic,
             c.date_conclusion, c.date_end, c.date_create_contract, c.id_type, tc.name_type_contract,
             c.id_counterparty, cp.name_counterparty, c.id_status_contract, sc.name_status_contract`,
-        contractID)
-    
-    if err != nil {
-        return nil, err
-    }
-    defer rows.Close()
+		contractID)
 
-    var contracts []models.Contracts
-    for rows.Next() {
-        var contract models.Contracts
-        var tegsJSON []byte
-        
-        err = rows.Scan(
-            &contract.Id_contract,
-            &contract.Name_contract,
-            &contract.Id_user,
-            &contract.Surname,
-            &contract.Username,
-            &contract.Patronymic,
-            &contract.Date_conclusion,
-            &contract.Date_end,
-            &contract.Date_contract_create,
-            &contract.Id_type,
-            &contract.Name_type,
-            &contract.Id_counterparty,
-            &contract.Name_counterparty,
-            &contract.Id_status_contract,
-            &contract.Name_status_contract,
-            &tegsJSON,
-        )
-        
-        if err != nil {
-            return nil, err
-        }
-        
-        // Декодируем JSON с тегами
-        if err := json.Unmarshal(tegsJSON, &contract.Tegs); err != nil {
-            return nil, err
-        }
-        
-        contracts = append(contracts, contract)
-    }
-    
-    return contracts, nil
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var contracts []models.Contracts
+	for rows.Next() {
+		var contract models.Contracts
+		var tegsJSON []byte
+
+		err = rows.Scan(
+			&contract.Id_contract,
+			&contract.Name_contract,
+			&contract.Id_user,
+			&contract.Surname,
+			&contract.Username,
+			&contract.Patronymic,
+			&contract.Date_conclusion,
+			&contract.Date_end,
+			&contract.Date_contract_create,
+			&contract.Id_type,
+			&contract.Name_type,
+			&contract.Id_counterparty,
+			&contract.Name_counterparty,
+			&contract.Id_status_contract,
+			&contract.Name_status_contract,
+			&tegsJSON,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		// Декодируем JSON с тегами
+		if err := json.Unmarshal(tegsJSON, &contract.Tegs); err != nil {
+			return nil, err
+		}
+
+		contracts = append(contracts, contract)
+	}
+
+	return contracts, nil
 }
-//доделан
-func DBgetContractUserId(user_id int) ([]models.Contracts, error) {
-    conn := db.GetDB()
-    if conn == nil {
-        return nil, errors.New("connection error")
-    }
 
-    query := `
+func DBgetContractUserId(user_id int) ([]models.Contracts, error) {
+	conn := db.GetDB()
+	if conn == nil {
+		return nil, errors.New("connection error")
+	}
+
+	query := `
         SELECT 
             c.id_contract,
             c.name_contract,
@@ -626,77 +626,77 @@ func DBgetContractUserId(user_id int) ([]models.Contracts, error) {
             c.notes,
             c.conditions`
 
-    rows, err := conn.Query( context.Background(),query, user_id)
-    if err != nil {
-        return nil, err
-    }
-    defer rows.Close()
+	rows, err := conn.Query(context.Background(), query, user_id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
 
-    var contracts []models.Contracts
-    for rows.Next() {
-        var contract models.Contracts
-        var tegsJSON []byte
+	var contracts []models.Contracts
+	for rows.Next() {
+		var contract models.Contracts
+		var tegsJSON []byte
 
-        err = rows.Scan(
-            &contract.Id_contract,
-            &contract.Name_contract,
-            &contract.Date_contract_create,
-            &contract.Id_user,
-            &contract.Surname,
-            &contract.Username,
-            &contract.Patronymic,
-            &contract.Phone,
-            &contract.Email,
-            &contract.Date_conclusion,
-            &contract.Date_end,
-            &contract.Id_type,
-            &contract.Name_type,
-            &contract.Cost,
-            &contract.Object_contract,
-            &contract.Term_contract,
-            &contract.Id_counterparty,
-            &contract.Name_counterparty,
-            &contract.Contact_info,
-            &contract.Inn,
-            &contract.Ogrn,
-            &contract.Adress,
-            &contract.Dop_info,
-            &contract.Id_status_contract,
-            &contract.Name_status_contract,
-            &contract.Notes,
-            &contract.Condition,
-            &tegsJSON,
-        )
-        if err != nil {
-            return nil, err
-        }
+		err = rows.Scan(
+			&contract.Id_contract,
+			&contract.Name_contract,
+			&contract.Date_contract_create,
+			&contract.Id_user,
+			&contract.Surname,
+			&contract.Username,
+			&contract.Patronymic,
+			&contract.Phone,
+			&contract.Email,
+			&contract.Date_conclusion,
+			&contract.Date_end,
+			&contract.Id_type,
+			&contract.Name_type,
+			&contract.Cost,
+			&contract.Object_contract,
+			&contract.Term_contract,
+			&contract.Id_counterparty,
+			&contract.Name_counterparty,
+			&contract.Contact_info,
+			&contract.Inn,
+			&contract.Ogrn,
+			&contract.Adress,
+			&contract.Dop_info,
+			&contract.Id_status_contract,
+			&contract.Name_status_contract,
+			&contract.Notes,
+			&contract.Condition,
+			&tegsJSON,
+		)
+		if err != nil {
+			return nil, err
+		}
 
-        // Декодируем JSON с тегами
-        if err := json.Unmarshal(tegsJSON, &contract.Tegs); err != nil {
-            return nil, err
-        }
+		// Декодируем JSON с тегами
+		if err := json.Unmarshal(tegsJSON, &contract.Tegs); err != nil {
+			return nil, err
+		}
 
-        contracts = append(contracts, contract)
-    }
+		contracts = append(contracts, contract)
+	}
 
-    return contracts, nil
+	return contracts, nil
 }
 
-func DBaddContract(contract models.Contracts)error{
-	conn:= db.GetDB()
-	if conn==nil{
-        return errors.New("connection error")
-    }
+func DBaddContract(contract models.Contracts) error {
+	conn := db.GetDB()
+	if conn == nil {
+		return errors.New("connection error")
+	}
 	var userExist bool
-    err := conn.QueryRow( context.Background(),`SELECT EXISTS(SELECT 1 FROM users WHERE id_user = $1)`, contract.Id_user).Scan(&userExist)
-    if err != nil {
-        return err
-    }
-    if !userExist {
-        return errors.New("user not found")
-    }
+	err := conn.QueryRow(context.Background(), `SELECT EXISTS(SELECT 1 FROM users WHERE id_user = $1)`, contract.Id_user).Scan(&userExist)
+	if err != nil {
+		return err
+	}
+	if !userExist {
+		return errors.New("user not found")
+	}
 
-	_,err=conn.Exec( context.Background(),`
+	_, err = conn.Exec(context.Background(), `
 	INSERT INTO contracts (
   name_contract,
   date_create_contract,
@@ -729,20 +729,20 @@ func DBaddContract(contract models.Contracts)error{
 		contract.Notes,
 		contract.Condition,
 	)
-	if err!=nil{
-		
+	if err != nil {
+
 		return err
 	}
 	return nil
 }
 
-func DBchangeContract(contract models.Contracts) error{
-	conn:= db.GetDB()
-	if conn==nil{
-        return errors.New("connection error")
-    }
+func DBchangeContract(contract models.Contracts) error {
+	conn := db.GetDB()
+	if conn == nil {
+		return errors.New("connection error")
+	}
 
-	_, err:=conn.Exec( context.Background(),`
+	_, err := conn.Exec(context.Background(), `
 	UPDATE  contracts SET
 		name_contract = $1,
 		date_create_contract = $2,
@@ -759,7 +759,7 @@ func DBchangeContract(contract models.Contracts) error{
 		conditions = $13
 		WHERE id_contract = $14
 		`,
-		
+
 		contract.Name_contract,
 		contract.Date_contract_create,
 		contract.Id_user,
@@ -774,71 +774,129 @@ func DBchangeContract(contract models.Contracts) error{
 		contract.Notes,
 		contract.Condition,
 		contract.Id_contract,
-
-		
 	)
-	if err!=nil{
+	if err != nil {
 		return err
 	}
 	return nil
 }
 
 func DBchangeContractUser(id_contract int, id_user int) error {
-    conn:= db.GetDB()
-    if conn==nil{
-        return errors.New("connection error")
-    }
-    
-    var exists bool
-    err := conn.QueryRow( context.Background(),`SELECT EXISTS(SELECT 1 FROM users WHERE id_user = $1)`, id_user).Scan(&exists)
-    if err != nil {
-        return err
-    }
-    if !exists {
-        return errors.New("id_user не существует в таблице users")
-    }
+	conn := db.GetDB()
+	if conn == nil {
+		return errors.New("connection error")
+	}
 
-   
-    exists = false
-    err = conn.QueryRow( context.Background(),`SELECT EXISTS(SELECT 1 FROM contracts WHERE id_contract = $1)`, id_contract).Scan(&exists)
-    if err != nil {
-        return err
-    }
-    if !exists {
-        return errors.New("id_contract не существует в таблице contracts")
-    }
+	var exists bool
+	err := conn.QueryRow(context.Background(), `SELECT EXISTS(SELECT 1 FROM users WHERE id_user = $1)`, id_user).Scan(&exists)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return errors.New("id_user не существует в таблице users")
+	}
 
+	exists = false
+	err = conn.QueryRow(context.Background(), `SELECT EXISTS(SELECT 1 FROM contracts WHERE id_contract = $1)`, id_contract).Scan(&exists)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return errors.New("id_contract не существует в таблице contracts")
+	}
 
-    result, err := conn.Exec( context.Background(),`
+	result, err := conn.Exec(context.Background(), `
         UPDATE contracts
         SET id_user = $2
         WHERE id_contract = $1
     `, id_contract, id_user)
 
-    if err != nil {
-        return err
-    }
+	if err != nil {
+		return err
+	}
 
-    rowsAffected := result.RowsAffected()
-    if rowsAffected == 0 {
-        return errors.New("id_contract или id_user не существует в таблице contracts")
-    }
+	rowsAffected := result.RowsAffected()
+	if rowsAffected == 0 {
+		return errors.New("id_contract или id_user не существует в таблице contracts")
+	}
 
-    return nil
+	return nil
 }
 
-func DBdeleteContract(contract_id int)error{
-	conn:=db.GetDB()
-    if conn==nil{
-        return errors.New("connection error")
-    }
-	
-	_,err:=conn.Exec( context.Background(),
-		`
-		DELETE FROM contracts WHERE id_contract=$1`, contract_id)
-		if err!=nil{
-			return err
-		}
-		return nil
-}
+func DBdeleteContract(contract_id int) error {
+	conn := db.GetDB()
+	if conn == nil {
+		return errors.New("connection error")
+	}
 
+	// Начинаем транзакцию
+	tx, err := conn.Begin(context.Background())
+	if err != nil {
+		return fmt.Errorf("error starting transaction: %v", err)
+	}
+	defer tx.Rollback(context.Background())
+
+	// 1. Удаляем файлы, связанные с этапами контракта
+	_, err = tx.Exec(context.Background(), `
+        DELETE FROM files 
+        WHERE id_stage IN (
+            SELECT id_stage FROM stages WHERE id_contract = $1
+        )`, contract_id)
+	if err != nil {
+		return fmt.Errorf("error deleting files: %v", err)
+	}
+
+	// 2. Удаляем комментарии, связанные с историей статусов этапов
+	_, err = tx.Exec(context.Background(), `
+        DELETE FROM comments 
+        WHERE id_history_status IN (
+            SELECT id_history_status FROM history_status 
+            WHERE id_stage IN (
+                SELECT id_stage FROM stages WHERE id_contract = $1
+            )
+        )`, contract_id)
+	if err != nil {
+		return fmt.Errorf("error deleting comments: %v", err)
+	}
+
+	// 3. Удаляем историю статусов этапов
+	_, err = tx.Exec(context.Background(), `
+        DELETE FROM history_status 
+        WHERE id_stage IN (
+            SELECT id_stage FROM stages WHERE id_contract = $1
+        )`, contract_id)
+	if err != nil {
+		return fmt.Errorf("error deleting history_status: %v", err)
+	}
+
+	// 4. Удаляем сами этапы
+	_, err = tx.Exec(context.Background(), `
+        DELETE FROM stages 
+        WHERE id_contract = $1`, contract_id)
+	if err != nil {
+		return fmt.Errorf("error deleting stages: %v", err)
+	}
+
+	// 5. Удаляем связи контракта с тегами
+	_, err = tx.Exec(context.Background(), `
+        DELETE FROM contracts_by_tegs 
+        WHERE id_contract = $1`, contract_id)
+	if err != nil {
+		return fmt.Errorf("error deleting contracts_by_tegs: %v", err)
+	}
+
+	// 6. Наконец, удаляем сам контракт
+	_, err = tx.Exec(context.Background(), `
+        DELETE FROM contracts 
+        WHERE id_contract = $1`, contract_id)
+	if err != nil {
+		return fmt.Errorf("error deleting contract: %v", err)
+	}
+
+	// Если все прошло успешно, коммитим транзакцию
+	if err := tx.Commit(context.Background()); err != nil {
+		return fmt.Errorf("error committing transaction: %v", err)
+	}
+
+	return nil
+}
