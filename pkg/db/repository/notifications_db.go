@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 )
 
 func GetContractNotifications() ([]models.ContractNotification, error) {
@@ -14,31 +15,44 @@ func GetContractNotifications() ([]models.ContractNotification, error) {
 
 	query := `
 		SELECT 
+			u.id_user,
 			u.email, 
+			c.id_contract,
+			c.name_contract,
 			c.date_end, 
 			ns.variant_notification_settings
 		FROM users u
 		JOIN contracts c ON u.id_user = c.id_user
 		JOIN notification_settings_by_user nsu ON u.id_user = nsu.id_user
 		JOIN notification_settings ns ON nsu.id_notification_settings = ns.id_notification_settings
-		WHERE c.date_end - ns.variant_notification_settings = CURRENT_DATE`
+		WHERE (c.date_end - CURRENT_DATE) = ns.variant_notification_settings
+		AND c.date_end >= CURRENT_DATE`
 
+	log.Printf("[БД] Ищем контракты для уведомлений")
 	rows, err := conn.Query(context.Background(), query)
 	if err != nil {
-		return nil, fmt.Errorf("error querying contract notifications: %v", err)
+		return nil, fmt.Errorf("ошибка запроса контрактов: %w", err)
 	}
 	defer rows.Close()
 
 	var notifications []models.ContractNotification
 	for rows.Next() {
 		var n models.ContractNotification
-		err := rows.Scan(&n.Email, &n.DateEnd, &n.DaysBefore)
+		err := rows.Scan(
+			&n.UserID,
+			&n.Email,
+			&n.ContractID,
+			&n.ContractName,
+			&n.DateEnd,
+			&n.DaysBefore,
+		)
 		if err != nil {
-			return nil, fmt.Errorf("error scanning row: %v", err)
+			return nil, fmt.Errorf("ошибка сканирования: %w", err)
 		}
 		notifications = append(notifications, n)
 	}
 
+	log.Printf("[БД] Найдено %d контрактов для уведомления", len(notifications))
 	return notifications, rows.Err()
 }
 
@@ -47,34 +61,48 @@ func GetStageNotifications() ([]models.StageNotification, error) {
 
 	query := `
 		SELECT 
-			u.email, 
+			u.id_user,
+			u.email,
+			s.id_stage,
+			s.name_stage,
+			s.id_contract,
 			s.date_create_end, 
 			ns.variant_notification_settings
 		FROM users u
 		JOIN stages s ON u.id_user = s.id_user
 		JOIN notification_settings_by_user nsu ON u.id_user = nsu.id_user
 		JOIN notification_settings ns ON nsu.id_notification_settings = ns.id_notification_settings
-		WHERE s.date_create_end - ns.variant_notification_settings = CURRENT_DATE`
+		WHERE (s.date_create_end - CURRENT_DATE) = ns.variant_notification_settings
+		AND s.date_create_end >= CURRENT_DATE`
 
+	log.Printf("[БД] Ищем этапы для уведомлений")
 	rows, err := conn.Query(context.Background(), query)
 	if err != nil {
-		return nil, fmt.Errorf("error querying stage notifications: %v", err)
+		return nil, fmt.Errorf("ошибка запроса этапов: %w", err)
 	}
 	defer rows.Close()
 
 	var notifications []models.StageNotification
 	for rows.Next() {
 		var n models.StageNotification
-		err := rows.Scan(&n.Email, &n.DateEnd, &n.DaysBefore)
+		err := rows.Scan(
+			&n.UserID,
+			&n.Email,
+			&n.StageID,
+			&n.StageName,
+			&n.ContractID,
+			&n.DateEnd,
+			&n.DaysBefore,
+		)
 		if err != nil {
-			return nil, fmt.Errorf("error scanning row: %v", err)
+			return nil, fmt.Errorf("ошибка сканирования: %w", err)
 		}
 		notifications = append(notifications, n)
 	}
 
+	log.Printf("[БД] Найдено %d этапов для уведомления", len(notifications))
 	return notifications, rows.Err()
 }
-
 func SetUserNotificationSettings(userID int, variants []int) error {
 	conn := db.GetDB()
 	if conn == nil {

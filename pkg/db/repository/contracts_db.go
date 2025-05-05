@@ -752,7 +752,7 @@ func DBchangeContract(contract models.Contracts) error {
 		id_type = $6,
 		cost = $7,
 		object_contract = $8,
-		term_payment = $9,
+		term_payment = $9,  
 		id_counterparty = $10,
 		id_status_contract = $11,
 		notes = $12,

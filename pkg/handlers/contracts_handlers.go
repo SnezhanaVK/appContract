@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	db "appContract/pkg/db/repository"
 
@@ -449,24 +450,73 @@ func PostCreateContract(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"message": "Contract created successfully"})
 }
 
+type UpdateContractRequest struct {
+	Name_contract        string    `json:"name_contract"`
+	Date_contract_create time.Time `json:"date_contract_create"`
+	Id_user              int       `json:"id_user"`
+	Date_conclusion      time.Time `json:"date_conclusion"`
+	Date_end             time.Time `json:"date_end"`
+	Id_type              int       `json:"id_type"`
+	Cost                 int       `json:"cost"`
+	Object_contract      string    `json:"object_contract"`
+	Term_contract        string    `json:"term_contract"`
+	Id_counterparty      int       `json:"id_counterparty"`
+	Id_status_contract   int       `json:"id_status_contract"`
+	Notes                string    `json:"notes"`
+	Condition            string    `json:"condition"`
+}
+
 func PutChangeContract(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPut {
-		http.Error(w, "Invalid request method PutChangeContract", http.StatusBadRequest)
+		http.Error(w, "Invalid request method", http.StatusBadRequest)
 		return
 	}
-	var contract models.Contracts
-	err := json.NewDecoder(r.Body).Decode(&contract)
+
+	// Получаем ID из URL
+	vars := mux.Vars(r)
+	contractId := vars["contractID"]
+	id, err := strconv.Atoi(contractId)
 	if err != nil {
-		http.Error(w, "Invalid request body PutChangeContract", http.StatusBadRequest)
+		http.Error(w, "Invalid contract ID", http.StatusBadRequest)
 		return
 	}
+
+	// Декодируем только нужные поля
+	var updateData UpdateContractRequest
+	err = json.NewDecoder(r.Body).Decode(&updateData)
+	if err != nil {
+		log.Printf("JSON decode error: %v", err)
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// Преобразуем в полную модель
+	contract := models.Contracts{
+		Id_contract:          id,
+		Name_contract:        updateData.Name_contract,
+		Date_contract_create: updateData.Date_contract_create,
+		Id_user:              updateData.Id_user,
+		Date_conclusion:      updateData.Date_conclusion,
+		Date_end:             updateData.Date_end,
+		Id_type:              updateData.Id_type,
+		Cost:                 updateData.Cost,
+		Object_contract:      updateData.Object_contract,
+		Term_contract:        updateData.Term_contract,
+		Id_counterparty:      updateData.Id_counterparty,
+		Id_status_contract:   updateData.Id_status_contract,
+		Notes:                updateData.Notes,
+		Condition:            updateData.Condition,
+	}
+
 	err = db.DBchangeContract(contract)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("DB error: %v", err)
+		http.Error(w, "Database error", http.StatusInternalServerError)
 		return
 	}
+
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"message": "Contract updated successfully"})
+	json.NewEncoder(w).Encode(map[string]string{"message": "Contract updated"})
 }
 
 func PutChangeContractUser(w http.ResponseWriter, r *http.Request) {

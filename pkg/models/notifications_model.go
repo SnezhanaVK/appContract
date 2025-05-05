@@ -2,28 +2,28 @@ package models
 
 import "time"
 
-//notification_model.go в папке models
-
-
-
-type Notification_settings struct {
-    Id_notification_settings      int       `json:"id_notification"`
-    Variant_notification_settings int       `json:"variant_notification"` // Изменено на int
-    Id_user                       int       `json:"id_user"`
-    Email                         string    `json:"email"`
-    Date_end                      time.Time `json:"date_end"`          // Для контракта
-    Date_create_end               time.Time `json:"date_create_end"`  // Для этапа
+type NotificationSettings struct {
+	ID   int `json:"id_notification_settings"`
+	Days int `json:"variant_notification_settings"`
 }
 
-// Дополнительные структуры для запросов
+type UserNotification struct {
+	UserID     int    `json:"id_user"`
+	Email      string `json:"email"`
+	DaysBefore int    `json:"days_before"`
+}
+
 type ContractNotification struct {
-    Email      string    `json:"email"`
-    DateEnd    time.Time `json:"date_end"`
-    DaysBefore int       `json:"days_before"`
+	UserNotification
+	ContractID   int       `json:"id_contract"`
+	ContractName string    `json:"name_contract"`
+	DateEnd      time.Time `json:"date_end"`
 }
 
 type StageNotification struct {
-    Email      string    `json:"email"`
-    DateEnd    time.Time `json:"date_create_end"`
-    DaysBefore int       `json:"days_before"`
+	UserNotification
+	StageID    int       `json:"id_stage"`
+	StageName  string    `json:"name_stage"`
+	ContractID int       `json:"id_contract"`
+	DateEnd    time.Time `json:"date_create_end"`
 }
