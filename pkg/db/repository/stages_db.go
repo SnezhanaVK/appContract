@@ -537,30 +537,44 @@ func DBdeleteStage(id_stage int) error {
 
 	tx, err := conn.Begin(context.Background())
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to begin transaction: %v", err)
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback(context.Background())
+		}
+	}()
+
+	// Удаляем комментарии, связанные с историей статусов этого этапа
+	_, err = tx.Exec(context.Background(), `
+        DELETE FROM comments 
+        WHERE id_history_status IN (
+            SELECT id_history_status FROM history_status WHERE id_stage = $1
+        )`, id_stage)
+	if err != nil {
+		return fmt.Errorf("failed to delete comments: %v", err)
 	}
 
-	_, err = tx.Exec(context.Background(), `DELETE FROM history_states WHERE id_stage=$1`, id_stage)
+	// Удаляем историю статусов этапа
+	_, err = tx.Exec(context.Background(), `DELETE FROM history_status WHERE id_stage = $1`, id_stage)
 	if err != nil {
-		tx.Rollback(context.Background())
-		return err
+		return fmt.Errorf("failed to delete history_status: %v", err)
 	}
 
-	_, err = tx.Exec(context.Background(), `DELETE FROM files WHERE id_stage=$1`, id_stage)
+	// Удаляем файлы этапа
+	_, err = tx.Exec(context.Background(), `DELETE FROM files WHERE id_stage = $1`, id_stage)
 	if err != nil {
-		tx.Rollback(context.Background())
-		return err
+		return fmt.Errorf("failed to delete files: %v", err)
 	}
 
-	_, err = tx.Exec(context.Background(), `DELETE FROM stages WHERE id_stage=$1`, id_stage)
+	// Удаляем сам этап
+	_, err = tx.Exec(context.Background(), `DELETE FROM stages WHERE id_stage = $1`, id_stage)
 	if err != nil {
-		tx.Rollback(context.Background())
-		return err
+		return fmt.Errorf("failed to delete stage: %v", err)
 	}
 
-	err = tx.Commit(context.Background())
-	if err != nil {
-		return err
+	if err := tx.Commit(context.Background()); err != nil {
+		return fmt.Errorf("failed to commit transaction: %v", err)
 	}
 
 	return nil

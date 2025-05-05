@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gorilla/mux"
 	"github.com/jackc/pgx"
@@ -568,30 +569,41 @@ func DeleteStageFiles(w http.ResponseWriter, r *http.Request) {
 
 }
 func DeleteStage(w http.ResponseWriter, r *http.Request) {
+	// Проверка метода запроса
 	if r.Method != http.MethodDelete {
-		http.Error(w, "Invalid request method DeleteStage", http.StatusBadRequest)
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
+
+	// Извлечение и валидация stageID
 	vars := mux.Vars(r)
 	stageID, err := strconv.Atoi(vars["stageID"])
-	if err != nil {
-		http.Error(w, "Invalid stage_id", http.StatusBadRequest)
+	if err != nil || stageID <= 0 {
+		http.Error(w, "Invalid stage ID", http.StatusBadRequest)
 		return
 	}
+
+	// Удаление этапа
 	err = db.DBdeleteStage(stageID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		// Проверяем, является ли ошибка ошибкой "не найдено"
+		if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "does not exist") {
+			http.Error(w, "Stage not found", http.StatusNotFound)
+		} else {
+			http.Error(w, fmt.Sprintf("Failed to delete stage: %v", err), http.StatusInternalServerError)
+		}
 		return
 	}
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"message": "Stage deleted successfully"})
-	// Дополнительная проверка: если stageID не существует, вернуть ошибку
-	if stageID == 0 {
-		http.Error(w, "Stage not found", http.StatusNotFound)
-		return
-	}
-}
 
+	// Успешный ответ
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"message": "Stage deleted successfully",
+		"stageID": stageID,
+	})
+}
 func DeleteComment(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodDelete {
 		http.Error(w, "Invalid request method DeleteComment", http.StatusBadRequest)
