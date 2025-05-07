@@ -441,7 +441,7 @@ func DBaddComment(idStage int, idStatusStage int, comment string) error {
 		log.Fatal(err)
 	}
 
-	_, err = conn.Exec(context.Background(), `INSERT INTO comments (id_history_state, comment, date_create_comment)
+	_, err = conn.Exec(context.Background(), `INSERT INTO comments (id_history_status, comment, date_create_comment)
         VALUES ($1, $2, NOW())`,
 		idHistoryState,
 		comment)
@@ -506,7 +506,7 @@ func DBChengeStatusStage(id_stage int, id_status_stage int, comment string) erro
 		return err
 	}
 
-	_, err = tx.Exec(context.Background(), `INSERT INTO comments (id_history_state, comment, date_create_comment)
+	_, err = tx.Exec(context.Background(), `INSERT INTO comments (history_status, comment, date_create_comment)
         VALUES ($1, $2, NOW())`,
 		id_history_status,
 		comment)

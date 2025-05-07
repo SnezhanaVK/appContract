@@ -4,6 +4,8 @@ package handlers
 import (
 	db "appContract/pkg/db/repository"
 	"appContract/pkg/models"
+	"appContract/pkg/service"
+	"appContract/pkg/utils"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -517,6 +519,14 @@ func PostAddComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Отправляем уведомления
+	ctx := r.Context()
+	mailer := utils.NewDefaultEmailSender() // Используем дефолтную конфигурацию
+	notificationService := service.NewNotificationService(mailer)
+	if err := notificationService.NotifyStageStatusChange(ctx, idStage, idStatusStage, comment.Comment); err != nil {
+		log.Printf("Error sending notifications: %v", err)
+	}
+
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(map[string]string{"message": "Comment created successfully"})
 }
@@ -544,6 +554,15 @@ func PutStageStatus(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	// Отправляем уведомления
+	ctx := r.Context()
+	mailer := utils.NewDefaultEmailSender() // Используем дефолтную конфигурацию
+	notificationService := service.NewNotificationService(mailer)
+	if err := notificationService.NotifyStageStatusChange(ctx, stage.Id_stage, stage.Id_status_stage, stage.Comment); err != nil {
+		log.Printf("Error sending notifications: %v", err)
+	}
+
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"message": "Stage status updated successfully"})
 }

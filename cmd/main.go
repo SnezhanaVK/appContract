@@ -38,7 +38,7 @@ func main() {
 	}
 
 	c := cron.New()
-	_, err = c.AddFunc("32 01 * * *", func() {
+	_, err = c.AddFunc("32 12 * * *", func() {
 		log.Println("Запуск обработки уведомлений...")
 		if err := service.ProcessDailyNotifications(); err != nil {
 			log.Printf("Ошибка обработки уведомлений: %v", err)
