@@ -1,12 +1,11 @@
 package handlers
 
 import (
+	db "appContract/pkg/db/repository"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
-
-	db "appContract/pkg/db/repository"
 
 	"github.com/gorilla/mux"
 )

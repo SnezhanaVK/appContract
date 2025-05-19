@@ -7,7 +7,6 @@ import (
 )
 
 func NotificationRoutes(router *mux.Router) {
-	// Уведомления
 	router.HandleFunc("/api/users/{userID}/notifications", handlers.GetSettings).Methods("GET")
 	router.HandleFunc("/api/users/{userID}/notifications", handlers.PutUpdateUserSettings).Methods("PUT")
 	router.HandleFunc("/api/users/{userID}/notifications", handlers.DeleteSettings).Methods("DELETE")

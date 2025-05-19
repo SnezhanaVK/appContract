@@ -32,16 +32,13 @@ func GetPhoto(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if photo == nil {
-		// Можно вернуть дефолтную аватарку или 404
 		http.Error(w, "Avatar not found", http.StatusNotFound)
 		return
 	}
 
-	// Устанавливаем правильные заголовки
 	w.Header().Set("Content-Type", photo.Type_photo)
 	w.Header().Set("Content-Length", strconv.Itoa(len(photo.Data_photo)))
 
-	// Отправляем бинарные данные
 	if _, err := w.Write(photo.Data_photo); err != nil {
 		log.Printf("Failed to write image: %v", err)
 	}
@@ -51,7 +48,7 @@ func PostAddPhoto(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid request method", http.StatusBadRequest)
 		return
 	}
-	if err := r.ParseMultipartForm(32 << 20); err != nil { // 32MB
+	if err := r.ParseMultipartForm(32 << 20); err != nil {
 		http.Error(w, "Unable to parse form: "+err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -67,7 +64,6 @@ func PostAddPhoto(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to get photo: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	// Читаем ВСЕ данные файла
 	photoData, err := io.ReadAll(photo)
 	if err != nil {
 		http.Error(w, "Failed to read photo: "+err.Error(), http.StatusInternalServerError)
@@ -75,7 +71,6 @@ func PostAddPhoto(w http.ResponseWriter, r *http.Request) {
 	}
 	defer photo.Close()
 
-	// Создаем объект Photo
 	photoModel := models.Photo{
 		Data_photo: photoData,
 		Type_photo: handler.Header.Get("Content-Type"),
@@ -101,7 +96,7 @@ func PutChangePhoto(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid request method", http.StatusBadRequest)
 		return
 	}
-	if err := r.ParseMultipartForm(32 << 20); err != nil { // 32MB
+	if err := r.ParseMultipartForm(32 << 20); err != nil {
 		http.Error(w, "Unable to parse form: "+err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -117,7 +112,7 @@ func PutChangePhoto(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to get photo: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	// Читаем ВСЕ данные файла
+
 	photoData, err := io.ReadAll(photo)
 	if err != nil {
 		http.Error(w, "Failed to read photo: "+err.Error(), http.StatusInternalServerError)
@@ -125,7 +120,6 @@ func PutChangePhoto(w http.ResponseWriter, r *http.Request) {
 	}
 	defer photo.Close()
 
-	// Создаем объект Photo
 	photoModel := models.Photo{
 		Data_photo: photoData,
 		Type_photo: handler.Header.Get("Content-Type"),

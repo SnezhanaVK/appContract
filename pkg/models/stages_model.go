@@ -29,15 +29,15 @@ type Stages struct {
 	Id_type_contract   int    `json:"id_type_contract"`
 	Name_type_contract string `json:"d_type_contract"`
 
-	Id_history_state    int       `json:"id_history_state"`
+	Id_history_status   int       `json:"id_history_status"`
 	Data_create         time.Time `json:"data_create"`
 	Date_change_status  time.Time `json:"date_change_status"`
 	Comment             string    `json:"comment"`
 	Id_comment          int       `json:"id_comment"`
 	Date_create_comment time.Time `json:"date_create_comment"`
-	ContractSurname     string    `json:"contract_surname"`    // Пользователь контракта
-	ContractUsername    string    `json:"contract_username"`   // Пользователь контракта
-	ContractPatronymic  string    `json:"contract_patronymic"` // Пользователь контракта
+	ContractSurname     string    `json:"contract_surname"`
+	ContractUsername    string    `json:"contract_username"`
+	ContractPatronymic  string    `json:"contract_patronymic"`
 }
 type StatusStage struct {
 	Id_status_stage   int    `json:"id_status_stage"`

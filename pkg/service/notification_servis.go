@@ -19,11 +19,9 @@ func InitEmailSender(es *utils.EmailSender) {
 func ProcessDailyNotifications() error {
 	log.Println("=== Начало обработки уведомлений ===")
 
-	// Получаем текущую дату для логов
 	currentDate := time.Now().Format("2006-01-02")
 	log.Printf("Текущая дата: %s", currentDate)
 
-	// Контракты
 	contracts, err := db.GetContractNotifications()
 	if err != nil {
 		log.Printf("Ошибка получения контрактов: %v", err)
@@ -31,7 +29,6 @@ func ProcessDailyNotifications() error {
 	}
 	log.Printf("Найдено контрактов для уведомления: %d", len(contracts))
 
-	// Этапы
 	stages, err := db.GetStageNotifications()
 	if err != nil {
 		log.Printf("Ошибка получения этапов: %v", err)
@@ -39,7 +36,6 @@ func ProcessDailyNotifications() error {
 	}
 	log.Printf("Найдено этапов для уведомления: %d", len(stages))
 
-	// Отправка уведомлений
 	sendNotifications(contracts, stages)
 
 	log.Println("=== Обработка завершена ===")
@@ -77,7 +73,6 @@ func formatDaysText(days int) string {
 }
 
 func sendNotifications(contracts []models.ContractNotification, stages []models.StageNotification) {
-	// Контракты
 	for _, cn := range contracts {
 		content := utils.EmailContent{
 			Subject: fmt.Sprintf("Завершение контракта '%s'", cn.ContractName),
@@ -92,7 +87,6 @@ func sendNotifications(contracts []models.ContractNotification, stages []models.
 		}
 	}
 
-	// Этапы
 	for _, sn := range stages {
 		content := utils.EmailContent{
 			Subject: fmt.Sprintf("Завершение этапа '%s'", sn.StageName),

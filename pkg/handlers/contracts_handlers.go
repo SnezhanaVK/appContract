@@ -1,7 +1,7 @@
-// contracts.go
 package handlers
 
 import (
+	db "appContract/pkg/db/repository"
 	"appContract/pkg/models"
 	"encoding/json"
 	"fmt"
@@ -11,13 +11,9 @@ import (
 	"strings"
 	"time"
 
-	db "appContract/pkg/db/repository"
-
 	"github.com/gorilla/mux"
 )
 
-// Contracts
-// сделано
 func GetAllContracts(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Invalid request method GetAllContracts", http.StatusBadRequest)
@@ -32,12 +28,11 @@ func GetAllContracts(w http.ResponseWriter, r *http.Request) {
 
 	var contractsResponse []map[string]interface{}
 	for _, contract := range contracts {
-		// Создаем массив для тегов
-		var tegs []map[string]interface{}
-		for _, teg := range contract.Tegs {
-			tegs = append(tegs, map[string]interface{}{
-				"id_teg":   teg.Id_tegs,
-				"name_teg": teg.Name_tegs,
+		var tags []map[string]interface{}
+		for _, tag := range contract.Tags {
+			tags = append(tags, map[string]interface{}{
+				"id_teg":   tag.Id_tags,
+				"name_teg": tag.Name_tags,
 			})
 		}
 
@@ -53,7 +48,7 @@ func GetAllContracts(w http.ResponseWriter, r *http.Request) {
 			"name_type_contract":   contract.Name_type,
 			"name_counterparty":    contract.Name_counterparty,
 			"name_status_contract": contract.Name_status_contract,
-			"tegs":                 tegs, // Включаем массив тегов
+			"tegs":                 tags,
 		}
 		contractsResponse = append(contractsResponse, contractResponse)
 	}
@@ -92,11 +87,11 @@ func GetAllContractsByType(w http.ResponseWriter, r *http.Request) {
 	}
 	var contractsResponse []map[string]interface{}
 	for _, contract := range contracts {
-		var tegs []map[string]interface{}
-		for _, teg := range contract.Tegs {
-			tegs = append(tegs, map[string]interface{}{
-				"id_teg":   teg.Id_tegs,
-				"name_teg": teg.Name_tegs,
+		var tags []map[string]interface{}
+		for _, tag := range contract.Tags {
+			tags = append(tags, map[string]interface{}{
+				"id_teg":   tag.Id_tags,
+				"name_teg": tag.Name_tags,
 			})
 		}
 		contractResponse := map[string]interface{}{
@@ -111,8 +106,7 @@ func GetAllContractsByType(w http.ResponseWriter, r *http.Request) {
 			"name_type_contract":   contract.Name_type,
 			"name_counterparty":    contract.Name_counterparty,
 			"name_status_contract": contract.Name_status_contract,
-			"tegs":                 tegs, // Включаем массив тегов
-
+			"tegs":                 tags,
 		}
 		contractsResponse = append(contractsResponse, contractResponse)
 	}
@@ -130,12 +124,35 @@ func PostAllContractsByDateCreate(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid request method PostAllContractsByDateCreate", http.StatusBadRequest)
 		return
 	}
+	// Объявляем структуру для входящих данных
+	var dateRange struct {
+		Date_start string `json:"date_start"`
+		Date_end   string `json:"date_end"`
+	}
 
-	var date models.Date
-	err := json.NewDecoder(r.Body).Decode(&date.Date_start) //, &date.Date_end
+	// Декодируем весь JSON
+	err := json.NewDecoder(r.Body).Decode(&dateRange)
 	if err != nil {
-		http.Error(w, "Invalid request body PostAllContractsByDateCreate", http.StatusBadRequest)
+		http.Error(w, "Invalid request body: "+err.Error(), http.StatusBadRequest)
 		return
+	}
+	// Парсим даты
+	dateStart, err := time.Parse(time.RFC3339, dateRange.Date_start)
+	if err != nil {
+		http.Error(w, "Invalid date_start format", http.StatusBadRequest)
+		return
+	}
+
+	dateEnd, err := time.Parse(time.RFC3339, dateRange.Date_end)
+	if err != nil {
+		http.Error(w, "Invalid date_end format", http.StatusBadRequest)
+		return
+	}
+
+	// Создаем объект models.Date
+	date := models.Date{
+		Date_start: dateStart,
+		Date_end:   dateEnd,
 	}
 	contracts, err := db.DBgetContractsByDateCreate(date)
 	if err != nil {
@@ -144,11 +161,11 @@ func PostAllContractsByDateCreate(w http.ResponseWriter, r *http.Request) {
 	}
 	var contractsResponse []map[string]interface{}
 	for _, contract := range contracts {
-		var tegs []map[string]interface{}
-		for _, teg := range contract.Tegs {
-			tegs = append(tegs, map[string]interface{}{
-				"id_teg":   teg.Id_tegs,
-				"name_teg": teg.Name_tegs,
+		var tags []map[string]interface{}
+		for _, tag := range contract.Tags {
+			tags = append(tags, map[string]interface{}{
+				"id_teg":   tag.Id_tags,
+				"name_teg": tag.Name_tags,
 			})
 		}
 		contractResponse := map[string]interface{}{
@@ -163,7 +180,7 @@ func PostAllContractsByDateCreate(w http.ResponseWriter, r *http.Request) {
 			"name_type_contract":   contract.Name_type,
 			"name_counterparty":    contract.Name_counterparty,
 			"name_status_contract": contract.Name_status_contract,
-			"tegs":                 tegs,
+			"tegs":                 tags,
 		}
 		contractsResponse = append(contractsResponse, contractResponse)
 	}
@@ -200,12 +217,12 @@ func GetAllContractsByTegs(w http.ResponseWriter, r *http.Request) {
 	}
 	var contractsResponse []map[string]interface{}
 	for _, contract := range contracts {
-		// Создаем массив для тегов
-		var tegs []map[string]interface{}
-		for _, teg := range contract.Tegs {
-			tegs = append(tegs, map[string]interface{}{
-				"id_teg":   teg.Id_tegs,
-				"name_teg": teg.Name_tegs,
+
+		var tags []map[string]interface{}
+		for _, tag := range contract.Tags {
+			tags = append(tags, map[string]interface{}{
+				"id_teg":   tag.Id_tags,
+				"name_teg": tag.Name_tags,
 			})
 		}
 		contractResponse := map[string]interface{}{
@@ -220,7 +237,7 @@ func GetAllContractsByTegs(w http.ResponseWriter, r *http.Request) {
 			"name_type_contract":   contract.Name_type,
 			"name_counterparty":    contract.Name_counterparty,
 			"name_status_contract": contract.Name_status_contract,
-			"tegs":                 tegs,
+			"tegs":                 tags,
 		}
 		contractsResponse = append(contractsResponse, contractResponse)
 	}
@@ -257,12 +274,11 @@ func GetAllContractsByStatus(w http.ResponseWriter, r *http.Request) {
 	}
 	var contractsResponse []map[string]interface{}
 	for _, contract := range contracts {
-		// Создаем массив для тегов
-		var tegs []map[string]interface{}
-		for _, teg := range contract.Tegs {
-			tegs = append(tegs, map[string]interface{}{
-				"id_teg":   teg.Id_tegs,
-				"name_teg": teg.Name_tegs,
+		var tags []map[string]interface{}
+		for _, tag := range contract.Tags {
+			tags = append(tags, map[string]interface{}{
+				"id_teg":   tag.Id_tags,
+				"name_teg": tag.Name_tags,
 			})
 		}
 		contractResponse := map[string]interface{}{
@@ -277,7 +293,7 @@ func GetAllContractsByStatus(w http.ResponseWriter, r *http.Request) {
 			"name_type_contract":   contract.Name_type,
 			"name_counterparty":    contract.Name_counterparty,
 			"name_status_contract": contract.Name_status_contract,
-			"tegs":                 tegs, //
+			"tegs":                 tags,
 		}
 		contractsResponse = append(contractsResponse, contractResponse)
 	}
@@ -291,7 +307,6 @@ func GetAllContractsByStatus(w http.ResponseWriter, r *http.Request) {
 	w.Write(data)
 }
 
-// сделано
 func GetContractID(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Invalid request method GetContract", http.StatusBadRequest)
@@ -317,21 +332,18 @@ func GetContractID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Проверяем, что контракт найден
 	if len(contracts) == 0 {
 		http.Error(w, "Contract not found", http.StatusNotFound)
 		return
 	}
 
-	// Берем первый контракт (должен быть только один)
 	contract := contracts[0]
 
-	// Создаем массив для тегов
-	var tegs []map[string]interface{}
-	for _, teg := range contract.Tegs {
-		tegs = append(tegs, map[string]interface{}{
-			"id_teg":   teg.Id_tegs,
-			"name_teg": teg.Name_tegs,
+	var tags []map[string]interface{}
+	for _, tag := range contract.Tags {
+		tags = append(tags, map[string]interface{}{
+			"id_teg":   tag.Id_tags,
+			"name_teg": tag.Name_tags,
 		})
 	}
 
@@ -348,7 +360,7 @@ func GetContractID(w http.ResponseWriter, r *http.Request) {
 		"name_type_contract":   contract.Name_type,
 		"name_counterparty":    contract.Name_counterparty,
 		"name_status_contract": contract.Name_status_contract,
-		"tegs":                 tegs, // Добавляем массив тегов
+		"tegs":                 tags,
 	}
 
 	data, err := json.Marshal(contractResponse)
@@ -362,7 +374,6 @@ func GetContractID(w http.ResponseWriter, r *http.Request) {
 	w.Write(data)
 }
 
-// сделано
 func GetUserIDContracts(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Invalid request method GetUserIDContracts", http.StatusBadRequest)
@@ -391,12 +402,12 @@ func GetUserIDContracts(w http.ResponseWriter, r *http.Request) {
 
 	var contractsResponse []map[string]interface{}
 	for _, contract := range contracts {
-		// Формируем массив тегов
-		var tegs []map[string]interface{}
-		for _, teg := range contract.Tegs {
-			tegs = append(tegs, map[string]interface{}{
-				"id_tegs":   teg.Id_tegs,
-				"name_tegs": teg.Name_tegs,
+
+		var tags []map[string]interface{}
+		for _, tag := range contract.Tags {
+			tags = append(tags, map[string]interface{}{
+				"id_tegs":   tag.Id_tags,
+				"name_tegs": tag.Name_tags,
 			})
 		}
 
@@ -412,7 +423,7 @@ func GetUserIDContracts(w http.ResponseWriter, r *http.Request) {
 			"name_type_contract":   contract.Name_type,
 			"name_counterparty":    contract.Name_counterparty,
 			"name_status_contract": contract.Name_status_contract,
-			"tegs":                 tegs, // Включаем массив тегов
+			"tegs":                 tags,
 		}
 		contractsResponse = append(contractsResponse, contractResponse)
 	}
@@ -472,7 +483,6 @@ func PutChangeContract(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Получаем ID из URL
 	vars := mux.Vars(r)
 	contractId := vars["contractID"]
 	id, err := strconv.Atoi(contractId)
@@ -481,7 +491,6 @@ func PutChangeContract(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Декодируем только нужные поля
 	var updateData UpdateContractRequest
 	err = json.NewDecoder(r.Body).Decode(&updateData)
 	if err != nil {
@@ -490,7 +499,6 @@ func PutChangeContract(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Преобразуем в полную модель
 	contract := models.Contracts{
 		Id_contract:          id,
 		Name_contract:        updateData.Name_contract,
@@ -521,47 +529,52 @@ func PutChangeContract(w http.ResponseWriter, r *http.Request) {
 
 func PutChangeContractUser(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPut {
-		http.Error(w, "Invalid request method UpdateContractUser", http.StatusBadRequest)
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	var data map[string]int
-	err := json.NewDecoder(r.Body).Decode(&data)
-	if err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+	var request struct {
+		Id_contract int `json:"id_contract"`
+		Id_user     int `json:"id_user"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		http.Error(w, "Invalid JSON format", http.StatusBadRequest)
 		return
 	}
 
-	contract_id, ok := data["id_contract"]
-	if !ok {
-		http.Error(w, "Missing id_contract in request body", http.StatusBadRequest)
+	if request.Id_contract <= 0 {
+		http.Error(w, "Contract ID must be positive", http.StatusBadRequest)
 		return
 	}
 
-	userId, ok := data["id_user"]
-	if !ok {
-		http.Error(w, "Missing id_user in request body", http.StatusBadRequest)
+	if request.Id_user <= 0 {
+		http.Error(w, "User ID must be positive", http.StatusBadRequest)
 		return
 	}
 
-	err = db.DBchangeContractUser(contract_id, userId)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if err := db.DBchangeContractUser(request.Id_contract, request.Id_user); err != nil {
+		if strings.Contains(err.Error(), "does not exist") {
+			http.Error(w, err.Error(), http.StatusNotFound)
+		} else {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"message": "Contract user updated successfully"})
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"message": fmt.Sprintf("Contract %d updated with user %d", request.Id_contract, request.Id_user),
+	})
 }
 
 func DeleteContract(w http.ResponseWriter, r *http.Request) {
-	// Проверяем метод запроса
 	if r.Method != http.MethodDelete {
 		http.Error(w, "Invalid request method - expected DELETE", http.StatusMethodNotAllowed)
 		return
 	}
 
-	// Извлекаем ID контракта из URL
 	vars := mux.Vars(r)
 	contractID, err := strconv.Atoi(vars["contractID"])
 	if err != nil {
@@ -569,13 +582,11 @@ func DeleteContract(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Выполняем удаление контракта со всеми связанными данными
 	err = db.DBdeleteContract(contractID)
 	if err != nil {
-		// Логируем ошибку для отладки
+
 		log.Printf("Error deleting contract %d: %v", contractID, err)
 
-		// Проверяем тип ошибки для более точного HTTP-статуса
 		if strings.Contains(err.Error(), "not found") {
 			http.Error(w, "Contract not found", http.StatusNotFound)
 		} else {
@@ -584,7 +595,6 @@ func DeleteContract(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Формируем успешный ответ
 	response := map[string]interface{}{
 		"success":     true,
 		"message":     fmt.Sprintf("Contract %d and all related data deleted successfully", contractID),

@@ -33,7 +33,7 @@ func GetContractsandStags(w http.ResponseWriter, r *http.Request) {
 			"id_status_contract":   contract.Id_status_contract,
 			"name_status_contract": contract.Name_status_contract,
 			"id_teg":               contract.Id_teg_contract,
-			"name_teg":             contract.Tegs_contract,
+			"name_teg":             contract.Tags_contract,
 		}
 		contractsAndStagesResponse = append(contractsAndStagesResponse, contractResponse)
 		stages, err := db.DBgetStageAll()

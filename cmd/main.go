@@ -25,7 +25,6 @@ func main() {
 	defer db.CloseDB()
 	db.ConnectDB()
 
-	// Используем функцию с предустановленными параметрами
 	emailSender := utils.NewDefaultEmailSender()
 	service.InitEmailSender(emailSender)
 

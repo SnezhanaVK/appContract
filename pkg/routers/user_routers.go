@@ -7,10 +7,8 @@ import (
 )
 
 func UserRoutes(router *mux.Router) {
-	// Пользователи
 	router.HandleFunc("/api/users", handlers.GetAllUsers).Methods("GET")
 	router.HandleFunc("/api/users/{userID}", handlers.GetUserID).Methods("GET")
-
 	router.HandleFunc("/api/users/create", handlers.PostCreateUser).Methods("POST")
 	router.HandleFunc("/api/users/rolesUser/{userID}", handlers.GetUserRoles).Methods("GET")
 	router.HandleFunc("/api/users/addRoleAdmin/{userID}", handlers.PostAddRoleAdmin).Methods("POST")

@@ -1,4 +1,3 @@
-// File: db/dbConnect.go
 package db
 
 import (
@@ -30,8 +29,6 @@ func ConnectDB() {
 
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
-
-		// Исправлено здесь: используем NewWithConfig вместо ConnectConfig
 		dbPool, err = pgxpool.NewWithConfig(ctx, config)
 		if err != nil {
 			log.Fatal("Error connecting to database: ", err)

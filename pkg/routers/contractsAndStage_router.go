@@ -7,9 +7,5 @@ import (
 )
 
 func ContractsAndStageRoutes(router *mux.Router) {
-    // Контракты
-    router.HandleFunc("/api/contractsAndStage", handlers.GetContractsandStags).Methods("GET")
 	router.HandleFunc("/api/contractsAndStage", handlers.GetContractsandStags).Methods("GET")
-  
-    
 }

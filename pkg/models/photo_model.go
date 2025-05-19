@@ -1,3 +1,4 @@
+// photo_model.go
 package models
 
 type Photo struct {

@@ -97,7 +97,7 @@ func SetupDatabase() error {
 		fmt.Println("Table user_photos created successfully")
 
 		_, err = tx.Exec(context.Background(), `CREATE TABLE if not exists user_by_role (
-		user_by_role SERIAL PRIMARY KEY,
+		id_user_by_role SERIAL PRIMARY KEY,
 		id_user int NOT NULL,
 		id_role int NOT NULL,
 		CONSTRAINT fk_role_id FOREIGN KEY (id_role) REFERENCES roles(id_role),
@@ -204,7 +204,7 @@ CONSTRAINT fk_notification_settings FOREIGN KEY (id_notification_settings) REFER
     id_stage SERIAL PRIMARY KEY,
     name_stage VARCHAR(255) NOT NULL,
     id_user int NOT NULL,
-    description text NOT NULL,
+    description varchar(1000) NOT NULL,
     date_create_start date NOT NULL,
     date_create_end date NOT NULL,
     id_contract int NOT NULL,
@@ -274,7 +274,6 @@ CONSTRAINT fk_notification_settings FOREIGN KEY (id_notification_settings) REFER
 
 	}
 
-	// Инициализируем пул соединений
 	poolConfig, err := pgxpool.ParseConfig("host=localhost user=postgres password=1234 dbname=contract_db port=5432 sslmode=disable")
 	if err != nil {
 		return fmt.Errorf("error parsing pool config: %v", err)

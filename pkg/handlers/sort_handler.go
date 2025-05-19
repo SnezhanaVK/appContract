@@ -25,7 +25,7 @@ func GetTags(w http.ResponseWriter, r *http.Request) {
 	for _, tag := range tags {
 		tagResponse := map[string]interface{}{
 			"Id_teg_contract": tag.Id_teg_contract,
-			"Tegs_contract":   tag.Tegs_contract,
+			"Tegs_contract":   tag.Tags_contract,
 		}
 		tagsResponse = append(tagsResponse, tagResponse)
 	}
@@ -68,7 +68,7 @@ func GetStatusContract(w http.ResponseWriter, r *http.Request) {
 
 func GetStatusStage(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed) // Исправлен статус код
+		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -78,7 +78,6 @@ func GetStatusStage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Создаем массив для ответа с нужными полями
 	var response []map[string]interface{}
 	for _, status := range statuses {
 		statusResponse := map[string]interface{}{
@@ -98,17 +97,16 @@ func GetStatusStage(w http.ResponseWriter, r *http.Request) {
 
 func GetType(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed) // Исправлен статус код
+		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
 		return
 	}
 
 	types, err := db.DBGetTypeContract()
 	if err != nil {
-		http.Error(w, "Error fetching data from database", http.StatusInternalServerError) // Исправлена опечатка
+		http.Error(w, "Error fetching data from database", http.StatusInternalServerError)
 		return
 	}
 
-	// Создаем массив с нужными полями
 	var response []map[string]interface{}
 	for _, t := range types {
 		typeResponse := map[string]interface{}{
@@ -126,7 +124,6 @@ func GetType(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Обработчики
 func AddTagToContractHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	contractID, err := strconv.Atoi(vars["contractId"])
@@ -154,7 +151,6 @@ func AddTagToContractHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Успешный ответ
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(struct {
@@ -188,7 +184,6 @@ func RemoveTagFromContractHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Успешный ответ
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(struct {

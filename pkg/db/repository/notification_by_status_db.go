@@ -2,7 +2,6 @@ package db
 
 import (
 	"appContract/pkg/db"
-
 	"context"
 	"fmt"
 )

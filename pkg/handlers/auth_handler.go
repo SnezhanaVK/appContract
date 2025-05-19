@@ -12,10 +12,8 @@ import (
 	"github.com/dgrijalva/jwt-go"
 )
 
-// Обновленный обработчик Login
 var jwtKey = []byte("secretkey")
 
-// AuthResponse структура для ответа после авторизации (без токена)
 type AuthResponse struct {
 	Id_user int  `json:"id_user"`
 	Admin   bool `json:"admin"`
@@ -49,7 +47,6 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Создаем JWT токен
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"id":      authUser.Id_user,
 		"login":   authUser.Login,
@@ -63,8 +60,6 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	// Устанавливаем токен в куки
 	http.SetCookie(w, &http.Cookie{
 		Name:     "token",
 		Value:    tokenString,
@@ -75,7 +70,6 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		SameSite: http.SameSiteLaxMode,
 	})
 
-	// Отправляем ответ
 	response := AuthResponse{
 		Id_user: authUser.Id_user,
 		Admin:   authUser.Admin,
@@ -88,7 +82,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	}
 }
 func VerificationToken(w http.ResponseWriter, r *http.Request) {
-	// Получаем токен из куки
+
 	cookie, err := r.Cookie("token")
 	if err != nil {
 		if err == http.ErrNoCookie {
@@ -101,7 +95,6 @@ func VerificationToken(w http.ResponseWriter, r *http.Request) {
 
 	tokenString := cookie.Value
 
-	// Парсинг токена
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
@@ -114,7 +107,6 @@ func VerificationToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Если токен валиден
 	respondWithBool(w, true)
 }
 
@@ -123,19 +115,17 @@ func respondWithBool(w http.ResponseWriter, result bool) {
 	json.NewEncoder(w).Encode(map[string]bool{"valid": result})
 }
 func Logout(w http.ResponseWriter, r *http.Request) {
-	// Создаем куку с таким же именем ("token"), но с истекшим сроком действия
 	http.SetCookie(w, &http.Cookie{
 		Name:     "token",
 		Value:    "",
 		Path:     "/",
-		Expires:  time.Unix(0, 0), // Дата в прошлом (мгновенно истекает)
-		MaxAge:   -1,              // Немедленное удаление куки
+		Expires:  time.Unix(0, 0),
+		MaxAge:   -1,
 		HttpOnly: true,
-		Secure:   true, // Должно совпадать с настройками при логине
+		Secure:   true,
 		SameSite: http.SameSiteLaxMode,
 	})
 
-	// Отправляем успешный ответ
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]bool{"success": true})
 }
@@ -161,8 +151,7 @@ func PutForgotPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Проверяем существование пользователя
-	_, err := db.GetUserByEmail(authRequest.Email) // Нужно реализовать эту функцию
+	_, err := db.GetUserByEmail(authRequest.Email)
 	if err != nil {
 		if err.Error() == "user not found" {
 			http.Error(w, "User not found", http.StatusNotFound)
@@ -172,7 +161,6 @@ func PutForgotPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Обновляем пароль
 	if err := db.ChangePassword(authRequest.Email, authRequest.Password); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

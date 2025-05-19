@@ -1,4 +1,4 @@
-// stages.go
+// stage_handlers.go
 package handlers
 
 import (
@@ -18,7 +18,6 @@ import (
 	"github.com/jackc/pgx"
 )
 
-// Stages
 func GetAllStages(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Invalid request method GetAllStages", http.StatusBadRequest)
@@ -56,9 +55,9 @@ func GetAllStages(w http.ResponseWriter, r *http.Request) {
 		}
 		stagesResponse = append(stagesResponse, stageResponse)
 	}
-	data, ererr := json.Marshal(stagesResponse)
-	if ererr != nil {
-		http.Error(w, ererr.Error(), http.StatusInternalServerError)
+	data, err := json.Marshal(stagesResponse)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -92,7 +91,6 @@ func GetStagesByIdContract(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Подготовка ответа
 	response := make([]map[string]interface{}, 0, len(stages))
 	for _, stage := range stages {
 		response = append(response, map[string]interface{}{
@@ -146,7 +144,6 @@ func GetUserStages(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Создаем кастомный ответ только с нужными полями
 	var responses []map[string]interface{}
 	for _, stage := range stages {
 		response := map[string]interface{}{
@@ -225,9 +222,9 @@ func GetStage(w http.ResponseWriter, r *http.Request) {
 		"name_type_contract":   stage.Name_type_contract,
 	}
 
-	data, ererr := json.Marshal(stageResponse)
-	if ererr != nil {
-		http.Error(w, ererr.Error(), http.StatusInternalServerError)
+	data, err := json.Marshal(stageResponse)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -270,9 +267,9 @@ func GetStageFiles(w http.ResponseWriter, r *http.Request) {
 		filesResponse = append(filesResponse, fileResponse)
 	}
 
-	data, ererr := json.Marshal(filesResponse)
-	if ererr != nil {
-		http.Error(w, ererr.Error(), http.StatusInternalServerError)
+	data, err := json.Marshal(filesResponse)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -281,18 +278,15 @@ func GetStageFiles(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetStageFilesID(w http.ResponseWriter, r *http.Request) {
-	// Проверка метода запроса
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	// Извлечение параметров из URL
 	vars := mux.Vars(r)
 	stageID := vars["stageID"]
 	fileID := vars["fileID"]
 
-	// Конвертация параметров в числа
 	idStage, err := strconv.Atoi(stageID)
 	if err != nil {
 		http.Error(w, "Invalid Stage ID format", http.StatusBadRequest)
@@ -305,7 +299,6 @@ func GetStageFilesID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Получение файла из БД
 	file, err := db.DBgetFileIDStageID(idStage, idFile)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -321,7 +314,6 @@ func GetStageFilesID(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", file.Name_file))
 	w.Header().Set("Content-Length", strconv.Itoa(len(file.Data)))
 
-	// Отправка файла
 	if _, err := w.Write(file.Data); err != nil {
 		log.Printf("Failed to send file: %v", err)
 		http.Error(w, "File transmission failed", http.StatusInternalServerError)
@@ -356,9 +348,9 @@ func GetStageStatus(w http.ResponseWriter, r *http.Request) {
 		"name_status_stage": status.Name_status_stage,
 	}
 
-	data, ererr := json.Marshal(statusResponse)
-	if ererr != nil {
-		http.Error(w, ererr.Error(), http.StatusInternalServerError)
+	data, err := json.Marshal(statusResponse)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -391,7 +383,7 @@ func GetComments(w http.ResponseWriter, r *http.Request) {
 	var commentsResponse []map[string]interface{}
 	for _, comment := range comments {
 		commentResponse := map[string]interface{}{
-			"id_history_state": comment.Id_history_state,
+			"id_history_state": comment.Id_history_status,
 			"id_status_stage":  comment.Id_status_stage,
 			"id_stage":         comment.Id_stage,
 			"data_create":      comment.Data_create,
@@ -400,9 +392,9 @@ func GetComments(w http.ResponseWriter, r *http.Request) {
 		commentsResponse = append(commentsResponse, commentResponse)
 	}
 
-	data, ererr := json.Marshal(commentsResponse)
-	if ererr != nil {
-		http.Error(w, ererr.Error(), http.StatusInternalServerError)
+	data, err := json.Marshal(commentsResponse)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -416,12 +408,10 @@ func PostFileToStage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Увеличиваем лимит размера запроса
-	if err := r.ParseMultipartForm(32 << 20); err != nil { // 32MB
+	if err := r.ParseMultipartForm(32 << 20); err != nil {
 		http.Error(w, "Unable to parse form: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	// Получаем stage_id из URL
 	vars := mux.Vars(r)
 	stageID, err := strconv.Atoi(vars["stage_id"])
 	if err != nil {
@@ -429,7 +419,6 @@ func PostFileToStage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Получаем файл из запроса
 	file, handler, err := r.FormFile("file")
 	if err != nil {
 		http.Error(w, "Failed to get file: "+err.Error(), http.StatusBadRequest)
@@ -437,14 +426,12 @@ func PostFileToStage(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
-	// Читаем ВСЕ данные файла
 	fileData, err := io.ReadAll(file)
 	if err != nil {
 		http.Error(w, "Failed to read file: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// Создаем объект файла
 	newFile := models.File{
 		Name_file: handler.Filename,
 		Data:      fileData,
@@ -452,7 +439,6 @@ func PostFileToStage(w http.ResponseWriter, r *http.Request) {
 		Id_stage:  stageID,
 	}
 
-	// Сохраняем в БД
 	if err := db.DBaddFile(newFile); err != nil {
 		http.Error(w, "Database error: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -519,9 +505,8 @@ func PostAddComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Отправляем уведомления
 	ctx := r.Context()
-	mailer := utils.NewDefaultEmailSender() // Используем дефолтную конфигурацию
+	mailer := utils.NewDefaultEmailSender()
 	notificationService := service.NewNotificationService(mailer)
 	if err := notificationService.NotifyStageStatusChange(ctx, idStage, idStatusStage, comment.Comment); err != nil {
 		log.Printf("Error sending notifications: %v", err)
@@ -555,9 +540,8 @@ func PutStageStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Отправляем уведомления
 	ctx := r.Context()
-	mailer := utils.NewDefaultEmailSender() // Используем дефолтную конфигурацию
+	mailer := utils.NewDefaultEmailSender()
 	notificationService := service.NewNotificationService(mailer)
 	if err := notificationService.NotifyStageStatusChange(ctx, stage.Id_stage, stage.Id_status_stage, stage.Comment); err != nil {
 		log.Printf("Error sending notifications: %v", err)
@@ -573,12 +557,12 @@ func DeleteStageFiles(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	vars := mux.Vars(r)
-	id_faile, err := strconv.Atoi(vars["id_file"])
+	id_file, err := strconv.Atoi(vars["id_file"])
 	if err != nil {
 		http.Error(w, "Invalid id_file", http.StatusBadRequest)
 		return
 	}
-	err = db.DBdeleteFile(id_faile)
+	err = db.DBdeleteFile(id_file)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -588,13 +572,11 @@ func DeleteStageFiles(w http.ResponseWriter, r *http.Request) {
 
 }
 func DeleteStage(w http.ResponseWriter, r *http.Request) {
-	// Проверка метода запроса
 	if r.Method != http.MethodDelete {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	// Извлечение и валидация stageID
 	vars := mux.Vars(r)
 	stageID, err := strconv.Atoi(vars["stageID"])
 	if err != nil || stageID <= 0 {
@@ -602,10 +584,8 @@ func DeleteStage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Удаление этапа
 	err = db.DBdeleteStage(stageID)
 	if err != nil {
-		// Проверяем, является ли ошибка ошибкой "не найдено"
 		if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "does not exist") {
 			http.Error(w, "Stage not found", http.StatusNotFound)
 		} else {
@@ -614,7 +594,6 @@ func DeleteStage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Успешный ответ
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]interface{}{

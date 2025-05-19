@@ -5,7 +5,6 @@ import (
 	"appContract/pkg/models"
 	"appContract/pkg/utils"
 	"context"
-
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -43,7 +42,6 @@ func DBgetUserAll() ([]models.Users, error) {
 	usersMap := make(map[int]*models.Users)
 	for rows.Next() {
 		var user models.Users
-		// var role models.Role
 		var roleID *int
 		var roleName *string
 
@@ -62,7 +60,6 @@ func DBgetUserAll() ([]models.Users, error) {
 			return nil, fmt.Errorf("scan error: %v", err)
 		}
 
-		// Если пользователь уже есть в мапе, добавляем только роль (если она есть)
 		if existingUser, exists := usersMap[user.Id_user]; exists {
 			if roleID != nil {
 				role := models.Role{
@@ -74,7 +71,6 @@ func DBgetUserAll() ([]models.Users, error) {
 			continue
 		}
 
-		// Если пользователя нет в мапе, создаем новую запись
 		user.Roles = []models.Role{}
 		if roleID != nil {
 			role := models.Role{
@@ -86,7 +82,6 @@ func DBgetUserAll() ([]models.Users, error) {
 		usersMap[user.Id_user] = &user
 	}
 
-	// Преобразуем map в слайс
 	var users []models.Users
 	for _, u := range usersMap {
 		users = append(users, *u)
@@ -132,15 +127,13 @@ func DBgetUserID(user_id int) ([]models.Users, error) {
 			&user.Username,
 			&user.Patronymic,
 			&user.Phone,
-			&user.Email, // Добавлено
-			&user.Login, // Убедитесь, что это поле есть в модели
+			&user.Email,
+			&user.Login,
 			&rolesJSON,
 		)
 		if err != nil {
 			return nil, err
 		}
-
-		// Декодируем JSON с ролями
 		if err := json.Unmarshal(rolesJSON, &user.Roles); err != nil {
 			return nil, err
 		}
@@ -203,8 +196,6 @@ func DBAddUserRole(user models.Users, roleID int) error {
 	if conn == nil {
 		return errors.New("connection error")
 	}
-
-	// Определяем название роли для сообщений об ошибках
 	var roleName string
 	switch roleID {
 	case 1:
@@ -215,7 +206,6 @@ func DBAddUserRole(user models.Users, roleID int) error {
 		return fmt.Errorf("unknown role ID: %d", roleID)
 	}
 
-	// Проверяем, есть ли уже такая роль у пользователя
 	var exists bool
 	err := conn.QueryRow(context.Background(), `
         SELECT EXISTS(
@@ -233,7 +223,6 @@ func DBAddUserRole(user models.Users, roleID int) error {
 		return fmt.Errorf("user already has %s role (id_role=%d)", roleName, roleID)
 	}
 
-	// Если роли нет, добавляем
 	_, err = conn.Exec(context.Background(), `
         INSERT INTO user_by_role (
             id_user,
@@ -365,7 +354,6 @@ func DBchangeUser(user models.Users) error {
 		return errors.New("database connection error")
 	}
 
-	// Проверяем, что ID пользователя указан
 	if user.Id_user == 0 {
 		return errors.New("user ID is required")
 	}
@@ -389,7 +377,6 @@ func DBchangeUser(user models.Users) error {
 		return fmt.Errorf("failed to update user: %w", err)
 	}
 
-	// Проверяем, были ли сделаны изменения
 	rowsAffected := result.RowsAffected()
 	if rowsAffected == 0 {
 		return errors.New("no rows were updated - user not found or no changes made")
@@ -403,14 +390,12 @@ func DBdeleteUser(user_id int) error {
 		return errors.New("connection error")
 	}
 
-	// Начинаем транзакцию
 	tx, err := conn.Begin(context.Background())
 	if err != nil {
 		return fmt.Errorf("transaction begin error: %v", err)
 	}
-	defer tx.Rollback(context.Background()) // Откатываем транзакцию в случае ошибки
+	defer tx.Rollback(context.Background())
 
-	// Проверяем, есть ли связанные контракты
 	var contractCount int
 	err = tx.QueryRow(context.Background(),
 		"SELECT COUNT(*) FROM contracts WHERE id_user = $1", user_id).Scan(&contractCount)
@@ -421,7 +406,6 @@ func DBdeleteUser(user_id int) error {
 		return fmt.Errorf("cannot delete user - user has %d associated contracts", contractCount)
 	}
 
-	// Проверяем, есть ли связанные этапы
 	var stageCount int
 	err = tx.QueryRow(context.Background(),
 		"SELECT COUNT(*) FROM stages WHERE id_user = $1", user_id).Scan(&stageCount)
@@ -438,34 +422,29 @@ func DBdeleteUser(user_id int) error {
 		return fmt.Errorf("user_photos delete error: %v", err)
 	}
 
-	// Удаляем настройки уведомлений пользователя
 	_, err = tx.Exec(context.Background(),
 		"DELETE FROM notification_settings_by_user WHERE id_user = $1", user_id)
 	if err != nil {
 		return fmt.Errorf("notification_settings_by_user delete error: %v", err)
 	}
 
-	// Удаляем роли пользователя
 	_, err = tx.Exec(context.Background(),
 		"DELETE FROM user_by_role WHERE id_user = $1", user_id)
 	if err != nil {
 		return fmt.Errorf("user_by_role delete error: %v", err)
 	}
 
-	// Удаляем самого пользователя
 	result, err := tx.Exec(context.Background(),
 		"DELETE FROM users WHERE id_user = $1", user_id)
 	if err != nil {
 		return fmt.Errorf("users delete error: %v", err)
 	}
 
-	// Проверяем, была ли удалена хотя бы одна строка
 	rowsAffected := result.RowsAffected()
 	if rowsAffected == 0 {
 		return fmt.Errorf("user with id %d not found", user_id)
 	}
 
-	// Фиксируем транзакцию
 	if err := tx.Commit(context.Background()); err != nil {
 		return fmt.Errorf("transaction commit error: %v", err)
 	}

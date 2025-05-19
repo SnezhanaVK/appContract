@@ -8,14 +8,12 @@ import (
 func RequireRole(requiredRole string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// Извлекаем роли из контекста
 			roles, ok := r.Context().Value("roles").([]string)
 			if !ok {
 				respondWithError(w, "Access denied: no roles information", http.StatusForbidden)
 				return
 			}
 
-			// Проверяем наличие требуемой роли
 			hasAccess := false
 			for _, role := range roles {
 				if role == requiredRole {

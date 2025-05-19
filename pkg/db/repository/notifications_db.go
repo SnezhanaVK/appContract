@@ -108,15 +108,11 @@ func SetUserNotificationSettings(userID int, variants []int) error {
 	if conn == nil {
 		return errors.New("connection error")
 	}
-
-	// Начинаем транзакцию
 	tx, err := conn.Begin(context.Background())
 	if err != nil {
 		return fmt.Errorf("transaction start error: %v", err)
 	}
 	defer tx.Rollback(context.Background())
-
-	// Удаляем старые настройки
 	_, err = tx.Exec(context.Background(),
 		`DELETE FROM notification_settings_by_user 
 		WHERE id_user = $1`,
@@ -124,13 +120,9 @@ func SetUserNotificationSettings(userID int, variants []int) error {
 	if err != nil {
 		return fmt.Errorf("failed to delete old settings: %v", err)
 	}
-
-	// Если передан пустой список - коммитим и выходим
 	if len(variants) == 0 {
 		return tx.Commit(context.Background())
 	}
-
-	// Добавляем новые настройки
 	query := `
 	INSERT INTO notification_settings_by_user 
 		(id_user, id_notification_settings)

@@ -1,5 +1,7 @@
 package db
 
+// auth_db.go
+
 import (
 	db "appContract/pkg/db"
 	"appContract/pkg/models"
@@ -19,7 +21,6 @@ func Authorize(login string, password string) (*models.Users, error) {
 		return nil, errors.New("connection error")
 	}
 
-	// Основной запрос для получения пользователя
 	userQuery := `
         SELECT 
             id_user,
@@ -39,7 +40,6 @@ func Authorize(login string, password string) (*models.Users, error) {
 	var passwordHash string
 	var salt string
 
-	// Получаем основные данные пользователя
 	err := conn.QueryRow(context.Background(), userQuery, login).Scan(
 		&user.Id_user,
 		&user.Surname,
@@ -59,12 +59,10 @@ func Authorize(login string, password string) (*models.Users, error) {
 		return nil, err
 	}
 
-	// Проверяем пароль
 	if !utils.VerifyPassword(passwordHash, password, salt) {
 		return nil, errors.New("invalid password")
 	}
 
-	// Отдельный запрос для получения ролей
 	rolesQuery := `
         SELECT r.id_role, r.name_role 
         FROM user_by_role ubr
@@ -93,7 +91,6 @@ func Authorize(login string, password string) (*models.Users, error) {
 
 	user.Roles = roles
 
-	// Заполняем первую роль для совместимости
 	if len(user.Roles) > 0 {
 		user.Id_role = user.Roles[0].Id_role
 		user.Name_role = user.Roles[0].Name_role
@@ -102,12 +99,11 @@ func Authorize(login string, password string) (*models.Users, error) {
 		user.Name_role = ""
 	}
 
-	// Определяем флаги администратора и менеджера
 	for _, role := range user.Roles {
 		switch role.Id_role {
-		case 1: // Предполагаем, что 1 - это admin
+		case 1:
 			user.Admin = true
-		case 2: // Предполагаем, что 2 - это manager
+		case 2:
 			user.Manager = true
 		}
 	}
@@ -115,7 +111,7 @@ func Authorize(login string, password string) (*models.Users, error) {
 	return &user, nil
 }
 
-func GetAddmin(id int) (bool, error) {
+func GetAdmin(id int) (bool, error) {
 	conn := db.GetDB()
 	if conn == nil {
 		return false, errors.New("connection error")
@@ -158,7 +154,6 @@ func ChangePassword(email string, newPassword string) error {
 		return fmt.Errorf("failed to hash password: %v", err)
 	}
 
-	// Обновляем password_hash и salt
 	result, err := conn.Exec(context.Background(),
 		`UPDATE users 
          SET password_hash = $1, 

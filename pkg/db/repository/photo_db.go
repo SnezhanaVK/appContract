@@ -5,7 +5,6 @@ import (
 	"appContract/pkg/models"
 	"context"
 	"errors"
-
 	"log"
 
 	"github.com/jackc/pgx"
@@ -18,18 +17,17 @@ func DBgetPhoto(id_user int) (*models.Photo, error) {
 	}
 
 	var photo models.Photo
-	// Добавляем LIMIT 1 для гарантии одной записи
 	err := conn.QueryRow(context.Background(),
 		`SELECT id_photo, data, type 
          FROM user_photos 
          WHERE id_user = $1 
-         LIMIT 1`, // Важно для безопасности
+         LIMIT 1`,
 		id_user,
 	).Scan(&photo.Id_photo, &photo.Data_photo, &photo.Type_photo)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, nil // Фото не найдено
+			return nil, nil
 		}
 		log.Printf("Error getting photo: %v", err)
 		return nil, err
@@ -42,15 +40,12 @@ func DBaddPhoto(photo models.Photo) error {
 	if conn == nil {
 		return errors.New("failed to connect to database")
 	}
-
-	// Начинаем транзакцию
 	tx, err := conn.Begin(context.Background())
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback(context.Background())
 
-	// Добавляем новое фото
 	_, err = tx.Exec(context.Background(),
 		`INSERT INTO user_photos (data, type, id_user)
 		VALUES ($1, $2, $3)`,
@@ -61,8 +56,6 @@ func DBaddPhoto(photo models.Photo) error {
 		log.Printf("Error inserting new photo: %v", err)
 		return err
 	}
-
-	// Коммитим транзакцию
 	if err = tx.Commit(context.Background()); err != nil {
 		return err
 	}
@@ -75,15 +68,11 @@ func DBChangePhoto(photo models.Photo) error {
 	if conn == nil {
 		return errors.New("failed to connect to database")
 	}
-
-	// Начинаем транзакцию
 	tx, err := conn.Begin(context.Background())
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback(context.Background())
-
-	// Удаляем старые фото пользователя
 	_, err = tx.Exec(context.Background(),
 		"DELETE FROM user_photos WHERE id_user = $1",
 		photo.Id_user)
@@ -91,8 +80,6 @@ func DBChangePhoto(photo models.Photo) error {
 		log.Printf("Error deleting old photos: %v", err)
 		return err
 	}
-
-	// Добавляем новое фото
 	_, err = tx.Exec(context.Background(),
 		`INSERT INTO user_photos (data, type, id_user)
         VALUES ($1, $2, $3)`,
@@ -103,8 +90,6 @@ func DBChangePhoto(photo models.Photo) error {
 		log.Printf("Error inserting new photo: %v", err)
 		return err
 	}
-
-	// Коммитим транзакцию
 	if err = tx.Commit(context.Background()); err != nil {
 		return err
 	}
@@ -117,15 +102,11 @@ func DBDeletePhoto(id_user int) error {
 	if conn == nil {
 		return errors.New("failed to connect to database")
 	}
-
-	// Начинаем транзакцию
 	tx, err := conn.Begin(context.Background())
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback(context.Background())
-
-	// Удаляем старые фото пользователя
 	_, err = tx.Exec(context.Background(),
 		"DELETE FROM user_photos WHERE id_user = $1",
 		id_user)
@@ -133,8 +114,6 @@ func DBDeletePhoto(id_user int) error {
 		log.Printf("Error deleting old photos: %v", err)
 		return err
 	}
-
-	// Коммитим транзакцию
 	if err = tx.Commit(context.Background()); err != nil {
 		return err
 	}

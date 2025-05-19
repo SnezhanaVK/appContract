@@ -1,5 +1,6 @@
 package db
 
+//sort_db.go
 import (
 	db "appContract/pkg/db"
 	"appContract/pkg/models"
@@ -25,7 +26,7 @@ func DBGetTags() ([]models.Contracts, error) {
 	for rows.Next() {
 		var tag models.Contracts
 		err := rows.Scan(&tag.Id_teg_contract,
-			&tag.Tegs_contract)
+			&tag.Tags_contract)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -106,14 +107,11 @@ func DBGetTypeContract() ([]models.Contracts, error) {
 	return types, nil
 }
 
-// Добавление одного тега к контракту
 func AddTagToContract(contractID int, tagID int) error {
 	conn := db.GetDB()
 	if conn == nil {
 		return errors.New("connection error")
 	}
-
-	// Проверяем существование тега
 	var exists bool
 	err := conn.QueryRow(context.Background(),
 		`SELECT EXISTS(SELECT 1 FROM tegs WHERE id_teg = $1)`,
@@ -126,8 +124,6 @@ func AddTagToContract(contractID int, tagID int) error {
 	if !exists {
 		return errors.New("tag does not exist")
 	}
-
-	// Добавляем связь
 	_, err = conn.Exec(context.Background(),
 		`INSERT INTO contracts_by_tegs (id_contract, id_teg)
          VALUES ($1, $2)
@@ -140,8 +136,6 @@ func AddTagToContract(contractID int, tagID int) error {
 
 	return nil
 }
-
-// Удаление одного тега у контракта
 func RemoveTagFromContract(contractID int, tagID int) error {
 	conn := db.GetDB()
 	if conn == nil {
@@ -157,7 +151,6 @@ func RemoveTagFromContract(contractID int, tagID int) error {
 		return fmt.Errorf("failed to remove tag: %v", err)
 	}
 
-	// Проверяем что была удалена хотя бы одна запись
 	if rowsAffected := result.RowsAffected(); rowsAffected == 0 {
 		return errors.New("tag association not found")
 	}
@@ -175,8 +168,6 @@ func GetContractIDTags(contractID int) ([]Tag, error) {
 	if conn == nil {
 		return nil, errors.New("connection error")
 	}
-
-	// Выполняем запрос
 	rows, err := conn.Query(context.Background(),
 		`SELECT t.id_teg, t.name_teg 
          FROM contracts_by_tegs cbt
@@ -189,11 +180,8 @@ func GetContractIDTags(contractID int) ([]Tag, error) {
 	}
 	defer rows.Close()
 
-	// Создаем структуру для хранения результатов
-
 	var tags []Tag
 
-	// Итерируемся по результатам
 	for rows.Next() {
 		var tag Tag
 		if err := rows.Scan(&tag.ID, &tag.Name); err != nil {
@@ -202,7 +190,6 @@ func GetContractIDTags(contractID int) ([]Tag, error) {
 		tags = append(tags, tag)
 	}
 
-	// Проверяем ошибки итерации
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("rows iteration error: %v", err)
 	}

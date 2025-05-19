@@ -9,20 +9,17 @@ import (
 	"appContract/pkg/utils"
 )
 
-// CreateUser создает пользователя с автоматически сгенерированным паролем
 func CreateUser(user models.Users, emailSender utils.EmailSenderInterface) error {
-	// Генерируем постоянный пароль
+
 	password, err := utils.GenerateStrongPassword()
 	if err != nil {
 		return fmt.Errorf("failed to generate password: %v", err)
 	}
 
-	// Добавляем пользователя в БД
 	if err := db.DBaddUser(user, password); err != nil {
 		return fmt.Errorf("failed to create user: %v", err)
 	}
 
-	// Отправляем письмо с постоянным паролем
 	emailContent := utils.EmailContent{
 		Subject: "Данные вашего аккаунта",
 		Body: fmt.Sprintf(`

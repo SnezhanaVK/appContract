@@ -291,8 +291,6 @@ func DBgetFileIDStageID(id_stage int, id_file int) (models.File, error) {
 
 	var file models.File
 	var data []byte
-
-	// Используем QueryRow для одной записи
 	err := conn.QueryRow(
 		context.Background(),
 		`SELECT id_file, name_file, data, type_file, id_stage 
@@ -395,7 +393,7 @@ func DBaddFile(file models.File) error {
 		file.Id_stage,
 	)
 
-	return err // Возвращаем ошибку напрямую
+	return err
 }
 func DBaddStage(stage models.Stages) error {
 	conn := db.GetDB()
@@ -459,26 +457,34 @@ func DBgetComment(id_stage int) ([]models.Stages, error) {
 	}
 
 	rows, err := conn.Query(context.Background(), `
-        SELECT c.*
+        SELECT 
+            c.id_comment,
+            c.id_history_status,
+            c.comment,
+            c.date_create_comment,
+            hs.id_stage,
+            hs.id_status_stage
         FROM comments c
-        JOIN history_status hs ON c.id_history_state = hs.id_history_status
+        JOIN history_status hs ON c.id_history_status = hs.id_history_status
         WHERE hs.id_stage = $1
     `, id_stage)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	defer rows.Close()
 
 	var comments []models.Stages
 	for rows.Next() {
 		var comment models.Stages
-		err = rows.Scan(&comment.Id_comment,
-			&comment.Id_history_state,
+		err = rows.Scan(
+			&comment.Id_comment,
+			&comment.Id_history_status,
 			&comment.Comment,
-			&comment.Data_create)
-
+			&comment.Data_create,
+			&comment.Id_stage,
+			&comment.Id_status_stage)
 		if err != nil {
-			log.Fatal(err)
+			return nil, err
 		}
 		comments = append(comments, comment)
 	}
@@ -506,8 +512,8 @@ func DBChengeStatusStage(id_stage int, id_status_stage int, comment string) erro
 		return err
 	}
 
-	_, err = tx.Exec(context.Background(), `INSERT INTO comments (history_status, comment, date_create_comment)
-        VALUES ($1, $2, NOW())`,
+	_, err = tx.Exec(context.Background(), `INSERT INTO comments (id_history_status, comment, date_create_comment)
+    VALUES ($1, $2, NOW())`,
 		id_history_status,
 		comment)
 
@@ -545,7 +551,6 @@ func DBdeleteStage(id_stage int) error {
 		}
 	}()
 
-	// Удаляем комментарии, связанные с историей статусов этого этапа
 	_, err = tx.Exec(context.Background(), `
         DELETE FROM comments 
         WHERE id_history_status IN (
@@ -555,19 +560,16 @@ func DBdeleteStage(id_stage int) error {
 		return fmt.Errorf("failed to delete comments: %v", err)
 	}
 
-	// Удаляем историю статусов этапа
 	_, err = tx.Exec(context.Background(), `DELETE FROM history_status WHERE id_stage = $1`, id_stage)
 	if err != nil {
 		return fmt.Errorf("failed to delete history_status: %v", err)
 	}
 
-	// Удаляем файлы этапа
 	_, err = tx.Exec(context.Background(), `DELETE FROM files WHERE id_stage = $1`, id_stage)
 	if err != nil {
 		return fmt.Errorf("failed to delete files: %v", err)
 	}
 
-	// Удаляем сам этап
 	_, err = tx.Exec(context.Background(), `DELETE FROM stages WHERE id_stage = $1`, id_stage)
 	if err != nil {
 		return fmt.Errorf("failed to delete stage: %v", err)

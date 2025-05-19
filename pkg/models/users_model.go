@@ -1,5 +1,7 @@
 package models
 
+//users_model.go
+
 type Users struct {
 	Id_user           int    `json:"id_user"`
 	Surname           string `json:"surname"`

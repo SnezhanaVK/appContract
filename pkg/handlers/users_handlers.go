@@ -5,12 +5,11 @@ import (
 	"appContract/pkg/models"
 	"appContract/pkg/service"
 	"appContract/pkg/utils"
-	"fmt"
-	"strings"
-
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gorilla/mux"
 )
@@ -27,7 +26,6 @@ func GetAllUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Создаем кастомную структуру ответа
 	type RoleResponse struct {
 		IdRole   int    `json:"id_role"`
 		NameRole string `json:"name_role"`
@@ -44,7 +42,6 @@ func GetAllUsers(w http.ResponseWriter, r *http.Request) {
 		Roles      []RoleResponse `json:"roles"`
 	}
 
-	// Преобразуем исходные данные
 	response := make([]UserResponse, 0, len(dbUsers))
 	for _, user := range dbUsers {
 		roles := make([]RoleResponse, 0, len(user.Roles))
@@ -132,7 +129,6 @@ func PostCreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Создаем email sender (реализует EmailSenderInterface)
 	emailSender := utils.NewDefaultEmailSender()
 	if err := service.CreateUser(user, emailSender); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -220,7 +216,7 @@ func DeleteRemoveRoleAdmin(w http.ResponseWriter, r *http.Request) {
 	}
 	user.Id_user = id
 
-	err = db.DBRemoveUserRole(user, 1) // 1 - ID роли администратора
+	err = db.DBRemoveUserRole(user, 1)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -248,7 +244,7 @@ func DeleteRemoveRoleManager(w http.ResponseWriter, r *http.Request) {
 	}
 	user.Id_user = id
 
-	err = db.DBRemoveUserRole(user, 2) // 2 - ID роли менеджера
+	err = db.DBRemoveUserRole(user, 2)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -290,13 +286,12 @@ func GetUserRoles(w http.ResponseWriter, r *http.Request) {
 }
 
 func PutUpdateUser(w http.ResponseWriter, r *http.Request) {
-	// Проверка метода
+
 	if r.Method != http.MethodPut {
 		http.Error(w, "Invalid request method, PUT expected", http.StatusMethodNotAllowed)
 		return
 	}
 
-	// Получаем userID из URL
 	vars := mux.Vars(r)
 	userIDStr := vars["userID"]
 	if userIDStr == "" {
@@ -304,24 +299,20 @@ func PutUpdateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Конвертируем userID в число
 	userID, err := strconv.Atoi(userIDStr)
 	if err != nil {
 		http.Error(w, "Invalid user ID format", http.StatusBadRequest)
 		return
 	}
 
-	// Декодируем JSON тело запроса
 	var user models.Users
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
 		http.Error(w, fmt.Sprintf("Invalid request body: %v", err), http.StatusBadRequest)
 		return
 	}
 
-	// Устанавливаем ID из URL (переопределяем, если был указан в JSON)
 	user.Id_user = userID
 
-	// Вызываем функцию обновления
 	if err := db.DBchangeUser(user); err != nil {
 		if strings.Contains(err.Error(), "no rows were updated") {
 			http.Error(w, err.Error(), http.StatusNotFound)
@@ -331,7 +322,6 @@ func PutUpdateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Успешный ответ
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]interface{}{
@@ -356,7 +346,6 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 
 	err = db.DBdeleteUser(userId)
 	if err != nil {
-		// Различаем ошибку "не найден" и другие ошибки
 		if strings.Contains(err.Error(), "not found") {
 			http.Error(w, err.Error(), http.StatusNotFound)
 		} else {

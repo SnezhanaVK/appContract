@@ -1,5 +1,7 @@
 package db
 
+//contracts_db.go
+
 import (
 	"appContract/pkg/db"
 	"appContract/pkg/models"
@@ -7,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 )
 
 func DBgetContractAll() ([]models.Contracts, error) {
@@ -89,8 +92,7 @@ ORDER BY c.id_contract
 			return nil, err
 		}
 
-		// Декодируем JSON с тегами
-		if err := json.Unmarshal(tegsJSON, &contract.Tegs); err != nil {
+		if err := json.Unmarshal(tegsJSON, &contract.Tags); err != nil {
 			return nil, err
 		}
 
@@ -106,8 +108,6 @@ func DBgetContractByType(idType int) ([]models.Contracts, error) {
 	if conn == nil {
 		return nil, errors.New("connection error")
 	}
-
-	// Модифицированный SQL-запрос с агрегацией тегов
 	rows, err := conn.Query(context.Background(), `
         SELECT 
             c.id_contract,
@@ -174,15 +174,14 @@ func DBgetContractByType(idType int) ([]models.Contracts, error) {
 			&contract.Name_counterparty,
 			&contract.Id_status_contract,
 			&contract.Name_status_contract,
-			&tegsJSON, // Сканируем JSON с тегами
+			&tegsJSON,
 		)
 
 		if err != nil {
 			return nil, err
 		}
 
-		// Декодируем JSON в поле Tegs структуры Contracts
-		if err := json.Unmarshal(tegsJSON, &contract.Tegs); err != nil {
+		if err := json.Unmarshal(tegsJSON, &contract.Tags); err != nil {
 			return nil, err
 		}
 
@@ -256,7 +255,7 @@ func DBgetContractsByDateCreate(date models.Date) ([]models.Contracts, error) {
 			&contract.Patronymic,
 			&contract.Date_conclusion,
 			&contract.Date_contract_create,
-			&contract.Date_end,
+
 			&contract.Id_type,
 			&contract.Name_type,
 			&contract.Id_counterparty,
@@ -270,8 +269,7 @@ func DBgetContractsByDateCreate(date models.Date) ([]models.Contracts, error) {
 			return nil, err
 		}
 
-		// Декодируем JSON с тегами
-		if err := json.Unmarshal(tegsJSON, &contract.Tegs); err != nil {
+		if err := json.Unmarshal(tegsJSON, &contract.Tags); err != nil {
 			return nil, err
 		}
 
@@ -352,15 +350,14 @@ func DBgetContractsByTegs() ([]models.Contracts, error) {
 			&contract.Name_counterparty,
 			&contract.Id_status_contract,
 			&contract.Name_status_contract,
-			&tegsJSON, // Сканируем JSON с тегами
+			&tegsJSON,
 		)
 
 		if err != nil {
 			return nil, err
 		}
 
-		// Декодируем JSON в структуру тегов
-		if err := json.Unmarshal(tegsJSON, &contract.Tegs); err != nil {
+		if err := json.Unmarshal(tegsJSON, &contract.Tags); err != nil {
 			return nil, err
 		}
 
@@ -448,8 +445,7 @@ func DBgetContractsByStatus() ([]models.Contracts, error) {
 			return nil, err
 		}
 
-		// Декодируем JSON с тегами
-		if err := json.Unmarshal(tegsJSON, &contract.Tegs); err != nil {
+		if err := json.Unmarshal(tegsJSON, &contract.Tags); err != nil {
 			return nil, err
 		}
 
@@ -533,8 +529,7 @@ func DBgetContractID(contractID int) ([]models.Contracts, error) {
 			return nil, err
 		}
 
-		// Декодируем JSON с тегами
-		if err := json.Unmarshal(tegsJSON, &contract.Tegs); err != nil {
+		if err := json.Unmarshal(tegsJSON, &contract.Tags); err != nil {
 			return nil, err
 		}
 
@@ -659,7 +654,7 @@ func DBgetContractUserId(user_id int) ([]models.Contracts, error) {
 			&contract.Contact_info,
 			&contract.Inn,
 			&contract.Ogrn,
-			&contract.Adress,
+			&contract.Address,
 			&contract.Dop_info,
 			&contract.Id_status_contract,
 			&contract.Name_status_contract,
@@ -671,8 +666,7 @@ func DBgetContractUserId(user_id int) ([]models.Contracts, error) {
 			return nil, err
 		}
 
-		// Декодируем JSON с тегами
-		if err := json.Unmarshal(tegsJSON, &contract.Tegs); err != nil {
+		if err := json.Unmarshal(tegsJSON, &contract.Tags); err != nil {
 			return nil, err
 		}
 
@@ -782,44 +776,51 @@ func DBchangeContract(contract models.Contracts) error {
 }
 
 func DBchangeContractUser(id_contract int, id_user int) error {
+	ctx := context.Background()
+	log.Printf("[DEBUG] DBchangeContractUser: contract=%d, user=%d", id_contract, id_user)
+
 	conn := db.GetDB()
 	if conn == nil {
-		return errors.New("connection error")
+		log.Println("[ERROR] DB connection is nil")
+		return errors.New("database connection failed")
 	}
 
-	var exists bool
-	err := conn.QueryRow(context.Background(), `SELECT EXISTS(SELECT 1 FROM users WHERE id_user = $1)`, id_user).Scan(&exists)
+	var userExists bool
+	err := conn.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM users WHERE id_user = $1)`, id_user).Scan(&userExists)
 	if err != nil {
-		return err
-	}
-	if !exists {
-		return errors.New("id_user не существует в таблице users")
+		log.Printf("[ERROR] User check query failed: %v", err)
+		return fmt.Errorf("user verification failed")
 	}
 
-	exists = false
-	err = conn.QueryRow(context.Background(), `SELECT EXISTS(SELECT 1 FROM contracts WHERE id_contract = $1)`, id_contract).Scan(&exists)
+	if !userExists {
+		log.Printf("[WARN] User %d not found", id_user)
+		return fmt.Errorf("user %d does not exist", id_user)
+	}
+	var contractExists bool
+	err = conn.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM contracts WHERE id_contract = $1)`, id_contract).Scan(&contractExists)
 	if err != nil {
-		return err
-	}
-	if !exists {
-		return errors.New("id_contract не существует в таблице contracts")
+		log.Printf("[ERROR] Contract check query failed: %v", err)
+		return fmt.Errorf("contract verification failed")
 	}
 
-	result, err := conn.Exec(context.Background(), `
-        UPDATE contracts
-        SET id_user = $2
-        WHERE id_contract = $1
-    `, id_contract, id_user)
-
+	if !contractExists {
+		log.Printf("[WARN] Contract %d not found", id_contract)
+		return fmt.Errorf("contract %d does not exist", id_contract)
+	}
+	tag, err := conn.Exec(ctx,
+		`UPDATE contracts SET id_user = $2 WHERE id_contract = $1`,
+		id_contract, id_user)
 	if err != nil {
-		return err
+		log.Printf("[ERROR] Update failed: %v", err)
+		return fmt.Errorf("update operation failed")
 	}
 
-	rowsAffected := result.RowsAffected()
-	if rowsAffected == 0 {
-		return errors.New("id_contract или id_user не существует в таблице contracts")
+	if rowsAffected := tag.RowsAffected(); rowsAffected == 0 {
+		log.Printf("[WARN] No rows affected for contract %d", id_contract)
+		return fmt.Errorf("no changes made to contract %d", id_contract)
 	}
 
+	log.Printf("[INFO] Successfully updated contract %d with user %d", id_contract, id_user)
 	return nil
 }
 
@@ -828,15 +829,12 @@ func DBdeleteContract(contract_id int) error {
 	if conn == nil {
 		return errors.New("connection error")
 	}
-
-	// Начинаем транзакцию
 	tx, err := conn.Begin(context.Background())
 	if err != nil {
 		return fmt.Errorf("error starting transaction: %v", err)
 	}
 	defer tx.Rollback(context.Background())
 
-	// 1. Удаляем файлы, связанные с этапами контракта
 	_, err = tx.Exec(context.Background(), `
         DELETE FROM files 
         WHERE id_stage IN (
@@ -846,7 +844,6 @@ func DBdeleteContract(contract_id int) error {
 		return fmt.Errorf("error deleting files: %v", err)
 	}
 
-	// 2. Удаляем комментарии, связанные с историей статусов этапов
 	_, err = tx.Exec(context.Background(), `
         DELETE FROM comments 
         WHERE id_history_status IN (
@@ -859,7 +856,6 @@ func DBdeleteContract(contract_id int) error {
 		return fmt.Errorf("error deleting comments: %v", err)
 	}
 
-	// 3. Удаляем историю статусов этапов
 	_, err = tx.Exec(context.Background(), `
         DELETE FROM history_status 
         WHERE id_stage IN (
@@ -869,7 +865,6 @@ func DBdeleteContract(contract_id int) error {
 		return fmt.Errorf("error deleting history_status: %v", err)
 	}
 
-	// 4. Удаляем сами этапы
 	_, err = tx.Exec(context.Background(), `
         DELETE FROM stages 
         WHERE id_contract = $1`, contract_id)
@@ -877,7 +872,6 @@ func DBdeleteContract(contract_id int) error {
 		return fmt.Errorf("error deleting stages: %v", err)
 	}
 
-	// 5. Удаляем связи контракта с тегами
 	_, err = tx.Exec(context.Background(), `
         DELETE FROM contracts_by_tegs 
         WHERE id_contract = $1`, contract_id)
@@ -885,7 +879,6 @@ func DBdeleteContract(contract_id int) error {
 		return fmt.Errorf("error deleting contracts_by_tegs: %v", err)
 	}
 
-	// 6. Наконец, удаляем сам контракт
 	_, err = tx.Exec(context.Background(), `
         DELETE FROM contracts 
         WHERE id_contract = $1`, contract_id)
@@ -893,7 +886,6 @@ func DBdeleteContract(contract_id int) error {
 		return fmt.Errorf("error deleting contract: %v", err)
 	}
 
-	// Если все прошло успешно, коммитим транзакцию
 	if err := tx.Commit(context.Background()); err != nil {
 		return fmt.Errorf("error committing transaction: %v", err)
 	}

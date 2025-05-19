@@ -1,5 +1,7 @@
 package routers
 
+// contract_routes.go
+
 import (
 	"appContract/pkg/handlers"
 
@@ -7,7 +9,7 @@ import (
 )
 
 func ContractRoutes(router *mux.Router) {
-	// Контракты
+
 	router.HandleFunc("/api/contracts", handlers.GetAllContracts).Methods("GET")
 	router.HandleFunc("/api/contracts/user/{userID}", handlers.GetUserIDContracts).Methods("GET")
 	router.HandleFunc("/api/contracts/{contractID}", handlers.GetContractID).Methods("GET")
