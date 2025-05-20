@@ -212,3 +212,30 @@ func GetContractTagsHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(tags)
 }
+
+func GetCounterparties(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+		return
+	}
+
+	counterparties, err := db.DBGetAllCounterparties()
+	if err != nil {
+		http.Error(w, "Error fetching counterparties from database", http.StatusInternalServerError)
+		return
+	}
+
+	response := map[string]interface{}{
+		"status":  "success",
+		"count":   len(counterparties),
+		"data":    counterparties,
+		"message": "Counterparties retrieved successfully",
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, "Error encoding JSON response", http.StatusInternalServerError)
+	}
+}

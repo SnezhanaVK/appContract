@@ -472,6 +472,8 @@ func DBgetContractID(contractID int) ([]models.Contracts, error) {
             c.date_end,
             c.date_create_contract,
             c.id_type,
+			c.notes,
+			c.conditions,
             tc.name_type_contract,
             c.id_counterparty,
             cp.name_counterparty,
@@ -517,7 +519,9 @@ func DBgetContractID(contractID int) ([]models.Contracts, error) {
 			&contract.Date_end,
 			&contract.Date_contract_create,
 			&contract.Id_type,
-			&contract.Name_type,
+			&contract.Notes,      // Было на 11 позиции
+			&contract.Conditions, // Было на 12 позиции
+			&contract.Name_type,  // tc.name_type_contract
 			&contract.Id_counterparty,
 			&contract.Name_counterparty,
 			&contract.Id_status_contract,
@@ -648,7 +652,7 @@ func DBgetContractUserId(user_id int) ([]models.Contracts, error) {
 			&contract.Name_type,
 			&contract.Cost,
 			&contract.Object_contract,
-			&contract.Term_contract,
+			&contract.Term_payment,
 			&contract.Id_counterparty,
 			&contract.Name_counterparty,
 			&contract.Contact_info,
@@ -659,7 +663,7 @@ func DBgetContractUserId(user_id int) ([]models.Contracts, error) {
 			&contract.Id_status_contract,
 			&contract.Name_status_contract,
 			&contract.Notes,
-			&contract.Condition,
+			&contract.Conditions,
 			&tegsJSON,
 		)
 		if err != nil {
@@ -676,39 +680,44 @@ func DBgetContractUserId(user_id int) ([]models.Contracts, error) {
 	return contracts, nil
 }
 
-func DBaddContract(contract models.Contracts) error {
+func DBaddContract(contract models.Contracts) (int, error) {
 	conn := db.GetDB()
 	if conn == nil {
-		return errors.New("connection error")
+		return 0, errors.New("connection error")
 	}
+
+	// Проверка существования пользователя
 	var userExist bool
 	err := conn.QueryRow(context.Background(), `SELECT EXISTS(SELECT 1 FROM users WHERE id_user = $1)`, contract.Id_user).Scan(&userExist)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	if !userExist {
-		return errors.New("user not found")
+		return 0, errors.New("user not found")
 	}
 
-	_, err = conn.Exec(context.Background(), `
-	INSERT INTO contracts (
-  name_contract,
-  date_create_contract,
-  id_user,
-  date_conclusion,
-  date_end,
-  id_type,
-  cost,
-  object_contract,
-  term_payment,
-  id_counterparty,
-  id_status_contract,
-  notes,
-  conditions
-		)VALUES(
-		$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13
-		)
-		`,
+	// Добавляем RETURNING id_contract
+	var id int
+	err = conn.QueryRow(context.Background(), `
+    INSERT INTO contracts (
+        name_contract,
+        date_create_contract,
+        id_user,
+        date_conclusion,
+        date_end,
+        id_type,
+        cost,
+        object_contract,
+        term_payment,
+        id_counterparty,
+        id_status_contract,
+        notes,
+        conditions
+    ) VALUES (
+        $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13
+    )
+    RETURNING id_contract
+    `,
 		contract.Name_contract,
 		contract.Date_contract_create,
 		contract.Id_user,
@@ -717,17 +726,18 @@ func DBaddContract(contract models.Contracts) error {
 		contract.Id_type,
 		contract.Cost,
 		contract.Object_contract,
-		contract.Term_contract,
+		contract.Term_payment,
 		contract.Id_counterparty,
 		contract.Id_status_contract,
 		contract.Notes,
-		contract.Condition,
-	)
-	if err != nil {
+		contract.Conditions,
+	).Scan(&id)
 
-		return err
+	if err != nil {
+		return 0, err
 	}
-	return nil
+
+	return id, nil
 }
 
 func DBchangeContract(contract models.Contracts) error {
@@ -762,11 +772,11 @@ func DBchangeContract(contract models.Contracts) error {
 		contract.Id_type,
 		contract.Cost,
 		contract.Object_contract,
-		contract.Term_contract,
+		contract.Term_payment,
 		contract.Id_counterparty,
 		contract.Id_status_contract,
 		contract.Notes,
-		contract.Condition,
+		contract.Conditions,
 		contract.Id_contract,
 	)
 	if err != nil {

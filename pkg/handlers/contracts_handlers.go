@@ -360,6 +360,8 @@ func GetContractID(w http.ResponseWriter, r *http.Request) {
 		"name_type_contract":   contract.Name_type,
 		"name_counterparty":    contract.Name_counterparty,
 		"name_status_contract": contract.Name_status_contract,
+		"notes":                contract.Notes,
+		"conditions":           contract.Conditions,
 		"tegs":                 tags,
 	}
 
@@ -444,6 +446,7 @@ func PostCreateContract(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid request method PostCreateContract", http.StatusBadRequest)
 		return
 	}
+
 	var contract models.Contracts
 	err := json.NewDecoder(r.Body).Decode(&contract)
 	if err != nil {
@@ -451,30 +454,19 @@ func PostCreateContract(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid request body PostCreateContract", http.StatusBadRequest)
 		return
 	}
-	err = db.DBaddContract(contract)
+
+	id, err := db.DBaddContract(contract)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]string{"message": "Contract created successfully"})
-}
 
-type UpdateContractRequest struct {
-	Name_contract        string    `json:"name_contract"`
-	Date_contract_create time.Time `json:"date_contract_create"`
-	Id_user              int       `json:"id_user"`
-	Date_conclusion      time.Time `json:"date_conclusion"`
-	Date_end             time.Time `json:"date_end"`
-	Id_type              int       `json:"id_type"`
-	Cost                 int       `json:"cost"`
-	Object_contract      string    `json:"object_contract"`
-	Term_contract        string    `json:"term_contract"`
-	Id_counterparty      int       `json:"id_counterparty"`
-	Id_status_contract   int       `json:"id_status_contract"`
-	Notes                string    `json:"notes"`
-	Condition            string    `json:"condition"`
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"message": "Contract created successfully",
+		"id":      id,
+	})
 }
 
 func PutChangeContract(w http.ResponseWriter, r *http.Request) {
@@ -491,7 +483,7 @@ func PutChangeContract(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var updateData UpdateContractRequest
+	var updateData models.Contracts
 	err = json.NewDecoder(r.Body).Decode(&updateData)
 	if err != nil {
 		log.Printf("JSON decode error: %v", err)
@@ -509,11 +501,11 @@ func PutChangeContract(w http.ResponseWriter, r *http.Request) {
 		Id_type:              updateData.Id_type,
 		Cost:                 updateData.Cost,
 		Object_contract:      updateData.Object_contract,
-		Term_contract:        updateData.Term_contract,
+		Term_payment:         updateData.Term_payment,
 		Id_counterparty:      updateData.Id_counterparty,
 		Id_status_contract:   updateData.Id_status_contract,
 		Notes:                updateData.Notes,
-		Condition:            updateData.Condition,
+		Conditions:           updateData.Conditions,
 	}
 
 	err = db.DBchangeContract(contract)

@@ -14,11 +14,11 @@ type Contracts struct {
 	Id_type              int       `json:"id_type"`
 	Cost                 int       `json:"cost"`
 	Object_contract      string    `json:"object_contract"`
-	Term_contract        string    `json:"term_contract"`
+	Term_payment         string    `json:"term_payment"`
 	Id_counterparty      int       `json:"id_counterparty"`
 	Id_status_contract   int       `json:"id_status_contract"`
 	Notes                string    `json:"notes"`
-	Condition            string    `json:"condition"`
+	Conditions           string    `json:"conditions"`
 	Tags                 []Tag     `json:"tegs"`
 
 	Surname              string `json:"surname"`
