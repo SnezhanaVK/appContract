@@ -474,6 +474,9 @@ func DBgetContractID(contractID int) ([]models.Contracts, error) {
             c.id_type,
 			c.notes,
 			c.conditions,
+			c.cost,
+			c.object_contract,
+			c.term_payment,
             tc.name_type_contract,
             c.id_counterparty,
             cp.name_counterparty,
@@ -519,9 +522,12 @@ func DBgetContractID(contractID int) ([]models.Contracts, error) {
 			&contract.Date_end,
 			&contract.Date_contract_create,
 			&contract.Id_type,
-			&contract.Notes,      // Было на 11 позиции
-			&contract.Conditions, // Было на 12 позиции
-			&contract.Name_type,  // tc.name_type_contract
+			&contract.Notes,      
+			&contract.Conditions, 
+			&contract.Cost,      
+			&contract.Object_contract,
+			&contract.Term_payment,
+			&contract.Name_type,  
 			&contract.Id_counterparty,
 			&contract.Name_counterparty,
 			&contract.Id_status_contract,

@@ -362,6 +362,9 @@ func GetContractID(w http.ResponseWriter, r *http.Request) {
 		"name_status_contract": contract.Name_status_contract,
 		"notes":                contract.Notes,
 		"conditions":           contract.Conditions,
+		"cost":                 contract.Cost,
+		"object_contract":      contract.Object_contract,
+		"term_payment":         contract.Term_payment,
 		"tegs":                 tags,
 	}
 

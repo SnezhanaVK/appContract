@@ -12,52 +12,52 @@ package unit_tests
 // 	"github.com/stretchr/testify/require"
 // )
 
-// func TestSQLInjectionProtection(t *testing.T) {
-// 	// Сохраняем оригинальное подключение к БД
-// 	origGetDB := db.GetDB
-// 	defer func() { db.GetDB = origGetDB }()
+// // func TestSQLInjectionProtection(t *testing.T) {
+// // 	// Сохраняем оригинальное подключение к БД
+// // 	origGetDB := db.GetDB
+// // 	defer func() { db.GetDB = origGetDB }()
 
-// 	// Создаем мок подключения
-// 	mockConn := new(MockPgxConn)
-// 	db.GetDB = func() *pgx.Conn {
-// 		return mockConn
-// 	}
+// // 	// Создаем мок подключения
+// // 	mockConn := new(MockPgxConn)
+// // 	db.GetDB = func() *pgx.Conn {
+// // 		return mockConn
+// // 	}
 
-// 	testCases := []struct {
-// 		name     string
-// 		input    string
-// 		expected string
-// 	}{
-// 		{"Basic input", "normal_input", "normal_input"},
-// 		{"SQL injection attempt", "admin' OR '1'='1", "admin' OR '1'='1"},
-// 		{"Semicolon attack", "'; DROP TABLE users;--", "'; DROP TABLE users;--"},
-// 	}
+// // 	testCases := []struct {
+// // 		name     string
+// // 		input    string
+// // 		expected string
+// // 	}{
+// // 		{"Basic input", "normal_input", "normal_input"},
+// // 		{"SQL injection attempt", "admin' OR '1'='1", "admin' OR '1'='1"},
+// // 		{"Semicolon attack", "'; DROP TABLE users;--", "'; DROP TABLE users;--"},
+// // 	}
 
-// 	for _, tc := range testCases {
-// 		t.Run(tc.name, func(t *testing.T) {
-// 			// Настраиваем мок для возврата ожидаемого значения
-// 			mockRow := new(pgx.Row)
-// 			mockConn.On("QueryRow", context.Background(), "SELECT $1::text", []interface{}{tc.input}).
-// 				Return(mockRow).
-// 				Run(func(args mock.Arguments) {
-// 					// Симулируем работу Scan
-// 					row := args.Get(0).(*pgx.Row)
-// 					*row = pgx.Row{}
-// 					row.Scan = func(dest ...interface{}) error {
-// 						*dest[0].(*string) = tc.input
-// 						return nil
-// 					}
-// 				})
+// // 	for _, tc := range testCases {
+// // 		t.Run(tc.name, func(t *testing.T) {
+// // 			// Настраиваем мок для возврата ожидаемого значения
+// // 			mockRow := new(pgx.Row)
+// // 			mockConn.On("QueryRow", context.Background(), "SELECT $1::text", []interface{}{tc.input}).
+// // 				Return(mockRow).
+// // 				Run(func(args mock.Arguments) {
+// // 					// Симулируем работу Scan
+// // 					row := args.Get(0).(*pgx.Row)
+// // 					*row = pgx.Row{}
+// // 					row.Scan = func(dest ...interface{}) error {
+// // 						*dest[0].(*string) = tc.input
+// // 						return nil
+// // 					}
+// // 				})
 
-// 			var result string
-// 			err := mockConn.QueryRow(context.Background(), "SELECT $1::text", tc.input).Scan(&result)
+// // 			var result string
+// // 			err := mockConn.QueryRow(context.Background(), "SELECT $1::text", tc.input).Scan(&result)
 
-// 			assert.NoError(t, err)
-// 			assert.Equal(t, tc.expected, result)
-// 			mockConn.AssertExpectations(t)
-// 		})
-// 	}
-// }
+// // 			assert.NoError(t, err)
+// // 			assert.Equal(t, tc.expected, result)
+// // 			mockConn.AssertExpectations(t)
+// // 		})
+// // 	}
+// // }
 
 // func TestXSSProtection(t *testing.T) {
 // 	// Сохраняем оригинальное подключение к БД
@@ -251,4 +251,6 @@ package unit_tests
 // 		assert.Error(t, err)
 // 		assert.Equal(t, "invalid password", err.Error())
 // 	})
+
+// 	mockConn.AssertExpectations(t)
 // }
