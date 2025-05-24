@@ -497,8 +497,8 @@ func PutChangeContract(w http.ResponseWriter, r *http.Request) {
 	contract := models.Contracts{
 		Id_contract:          id,
 		Name_contract:        updateData.Name_contract,
-		Date_contract_create: updateData.Date_contract_create,
-		Id_user:              updateData.Id_user,
+		//Date_contract_create: updateData.Date_contract_create,
+		//Id_user:              updateData.Id_user,
 		Date_conclusion:      updateData.Date_conclusion,
 		Date_end:             updateData.Date_end,
 		Id_type:              updateData.Id_type,

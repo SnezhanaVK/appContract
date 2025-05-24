@@ -747,50 +747,45 @@ func DBaddContract(contract models.Contracts) (int, error) {
 }
 
 func DBchangeContract(contract models.Contracts) error {
-	conn := db.GetDB()
-	if conn == nil {
-		return errors.New("connection error")
-	}
+    conn := db.GetDB()
+    if conn == nil {
+        return errors.New("connection error")
+    }
 
-	_, err := conn.Exec(context.Background(), `
-	UPDATE  contracts SET
-		name_contract = $1,
-		date_create_contract = $2,
-		id_user = $3,
-		date_conclusion = $4,
-		date_end = $5,
-		id_type = $6,
-		cost = $7,
-		object_contract = $8,
-		term_payment = $9,  
-		id_counterparty = $10,
-		id_status_contract = $11,
-		notes = $12,
-		conditions = $13
-		WHERE id_contract = $14
-		`,
+    _, err := conn.Exec(context.Background(), `
+        UPDATE contracts SET
+            name_contract = $1,
+            date_conclusion = $2,
+            date_end = $3,
+            id_type = $4,
+            cost = $5,
+            object_contract = $6,
+            term_payment = $7,
+            id_counterparty = $8,
+            id_status_contract = $9,
+            notes = $10,
+            conditions = $11
+        WHERE id_contract = $12
+    `,
+        contract.Name_contract,
+        contract.Date_conclusion,
+        contract.Date_end,
+        contract.Id_type,
+        contract.Cost,
+        contract.Object_contract,
+        contract.Term_payment,
+        contract.Id_counterparty,
+        contract.Id_status_contract,
+        contract.Notes,
+        contract.Conditions,
+        contract.Id_contract,
+    )
 
-		contract.Name_contract,
-		contract.Date_contract_create,
-		contract.Id_user,
-		contract.Date_conclusion,
-		contract.Date_end,
-		contract.Id_type,
-		contract.Cost,
-		contract.Object_contract,
-		contract.Term_payment,
-		contract.Id_counterparty,
-		contract.Id_status_contract,
-		contract.Notes,
-		contract.Conditions,
-		contract.Id_contract,
-	)
-	if err != nil {
-		return err
-	}
-	return nil
+    if err != nil {
+        return fmt.Errorf("failed to update contract: %v", err)
+    }
+    return nil
 }
-
 func DBchangeContractUser(id_contract int, id_user int) error {
 	ctx := context.Background()
 	log.Printf("[DEBUG] DBchangeContractUser: contract=%d, user=%d", id_contract, id_user)
