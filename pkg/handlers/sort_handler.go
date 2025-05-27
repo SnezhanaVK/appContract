@@ -224,12 +224,57 @@ func GetCounterparties(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error fetching counterparties from database", http.StatusInternalServerError)
 		return
 	}
+	var response []map[string]interface{}
+	for _, cp := range counterparties {
+		cpResponse := map[string]interface{}{
+			"id_counterparty":   cp.Id_counterparty,
+			"name_counterparty": cp.Name_counterparty,
+		}
+		response = append(response, cpResponse)
+	}
 
-	response := map[string]interface{}{
-		"status":  "success",
-		"count":   len(counterparties),
-		"data":    counterparties,
-		"message": "Counterparties retrieved successfully",
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, "Error encoding JSON response", http.StatusInternalServerError)
+	}
+}
+
+func GetCounterpartiesbyID(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+		return
+	}
+	vars := mux.Vars(r)
+	counterpartyID:=vars["counterpartyID"]
+	if counterpartyID==""{
+		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+		return
+	}
+	id ,err:=strconv.Atoi(counterpartyID)
+	if err!=nil{
+		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+		return
+	}
+
+	counterparties, err := db.DBGetCounterpartybyID(id)
+	if err != nil {
+		http.Error(w, "Error fetching counterparties from database", http.StatusInternalServerError)
+		return
+	}
+	var response []map[string]interface{}
+	for _, cp := range counterparties {
+		cpResponse := map[string]interface{}{
+			"id_counterparty":   cp.Id_counterparty,
+			"name_counterparty": cp.Name_counterparty,
+			"contact":           cp.Contact_info,
+			"inn":               cp.INN,
+			"ogrn":              cp.OGRN,
+			"address":           cp.Adress,
+			"dop_info":          cp.Dop_info,
+		}
+		response = append(response, cpResponse)
 	}
 
 	w.Header().Set("Content-Type", "application/json")

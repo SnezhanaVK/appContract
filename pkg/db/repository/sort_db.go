@@ -243,3 +243,50 @@ func DBGetAllCounterparties() ([]models.Counterparty, error) {
 
 	return counterparties, nil
 }
+func DBGetCounterpartybyID(id_counterparty int) ([]models.Counterparty, error) {
+	conn := db.GetDB()
+	if conn == nil {
+		return nil, errors.New("database connection is nil")
+	}
+
+	rows, err := conn.Query(context.Background(), `
+        SELECT 
+            id_counterparty,
+            name_counterparty,
+            contact,
+            inn,
+            ogrn,
+            address,
+            dop_info
+        FROM counterparty
+		WHERE id_counterparty = $1
+    `, id_counterparty)
+	if err != nil {
+		return nil, fmt.Errorf("query error: %v", err)
+	}
+	defer rows.Close()
+
+	var counterparties []models.Counterparty
+	for rows.Next() {
+		var cp models.Counterparty
+		err := rows.Scan(
+			&cp.Id_counterparty,
+			&cp.Name_counterparty,
+			&cp.Contact_info,
+			&cp.INN,
+			&cp.OGRN,
+			&cp.Adress,
+			&cp.Dop_info,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan error: %v", err)
+		}
+		counterparties = append(counterparties, cp)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows error: %v", err)
+	}
+
+	return counterparties, nil
+}
