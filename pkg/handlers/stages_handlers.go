@@ -94,21 +94,18 @@ func GetStagesByIdContract(w http.ResponseWriter, r *http.Request) {
 	response := make([]map[string]interface{}, 0, len(stages))
 	for _, stage := range stages {
 		response = append(response, map[string]interface{}{
-			"id_stage":             stage.Id_stage,
-			"name_stage":           stage.Name_stage,
-			"id_user":              stage.Id_user,
-			"surname":              stage.Surname,
-			"username":             stage.Username,
-			"patronymic":           stage.Patronymic,
-			"description":          stage.Description,
-			"id_status_stage":      stage.Id_status_stage,
-			"name_status_stage":    stage.Name_status_stage,
-			"date_change_status":   stage.Date_change_status,
-			"date_create_start":    stage.Date_create_start,
-			"date_create_end":      stage.Date_create_end,
-			"date_create_contract": stage.Data_contract_create,
-			"id_contract":          stage.Id_contract,
-			"name_contract":        stage.Name_contract,
+		"id_stage":             stage.Id_stage,
+		"name_stage":           stage.Name_stage,
+		"id_user":              stage.Id_user,
+		"surname":              stage.Surname,
+		"username":             stage.Username,
+		"patronymic":           stage.Patronymic,
+		"description":          stage.Description,
+		"id_status_stage":      stage.Id_status_stage,
+		"name_status_stage":    stage.Name_status_stage,
+		"date_create_start":    stage.Date_create_start,
+		"date_create_end":      stage.Date_create_end,
+		"id_contract":          stage.Id_contract,
 		})
 	}
 
@@ -208,18 +205,13 @@ func GetStage(w http.ResponseWriter, r *http.Request) {
 		"surname":              stage.Surname,
 		"username":             stage.Username,
 		"patronymic":           stage.Patronymic,
-		"phone":                stage.Phone,
-		"email":                stage.Email,
 		"description":          stage.Description,
 		"id_status_stage":      stage.Id_status_stage,
 		"name_status_stage":    stage.Name_status_stage,
 		"date_create_start":    stage.Date_create_start,
 		"date_create_end":      stage.Date_create_end,
 		"id_contract":          stage.Id_contract,
-		"name_contract":        stage.Name_contract,
-		"date_create_contract": stage.Data_contract_create,
-		"id_type_contract":     stage.Id_type_contract,
-		"name_type_contract":   stage.Name_type_contract,
+	
 	}
 
 	data, err := json.Marshal(stageResponse)

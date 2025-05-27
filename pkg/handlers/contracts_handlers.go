@@ -411,8 +411,8 @@ func GetUserIDContracts(w http.ResponseWriter, r *http.Request) {
 		var tags []map[string]interface{}
 		for _, tag := range contract.Tags {
 			tags = append(tags, map[string]interface{}{
-				"id_tegs":   tag.Id_tags,
-				"name_tegs": tag.Name_tags,
+				"id_teg":   tag.Id_tags,
+				"name_teg": tag.Name_tags,
 			})
 		}
 
@@ -497,8 +497,6 @@ func PutChangeContract(w http.ResponseWriter, r *http.Request) {
 	contract := models.Contracts{
 		Id_contract:          id,
 		Name_contract:        updateData.Name_contract,
-		//Date_contract_create: updateData.Date_contract_create,
-		//Id_user:              updateData.Id_user,
 		Date_conclusion:      updateData.Date_conclusion,
 		Date_end:             updateData.Date_end,
 		Id_type:              updateData.Id_type,
