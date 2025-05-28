@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	"log"
 
 	"github.com/jackc/pgx"
@@ -422,6 +423,44 @@ func DBaddStage(stage models.Stages) error {
 	return nil
 
 }
+// func DBaddComment(idStage int, idStatusStage int, comment string) error {
+//     if strings.TrimSpace(comment) == "" {
+//         return errors.New("comment cannot be empty")
+//     }
+
+//     conn := db.GetDB()
+//     if conn == nil {
+//         return errors.New("DB connection is nil")
+//     }
+
+//     // Экранируем HTML и удаляем опасные конструкции
+//     cleanedComment := html.EscapeString(comment)
+    
+//     // Дополнительная очистка от javascript:
+//     cleanedComment = strings.ReplaceAll(cleanedComment, "javascript:", "")
+//     cleanedComment = strings.ReplaceAll(cleanedComment, "JAVASCRIPT:", "")
+    
+//     var idHistoryState int
+//     err := conn.QueryRow(context.Background(), 
+//         `SELECT id_history_status FROM history_status 
+//         WHERE id_stage = $1 AND id_status_stage = $2`,
+//         idStage, idStatusStage).Scan(&idHistoryState)
+
+//     if err != nil {
+//         return fmt.Errorf("error finding history status: %v", err)
+//     }
+
+//     // Используем параметризованный запрос для защиты от SQL-инъекций
+//     _, err = conn.Exec(context.Background(), 
+//         `INSERT INTO comments (id_history_status, comment, date_create_comment) 
+//         VALUES ($1, $2, NOW())`,
+//         idHistoryState, cleanedComment)
+
+//     if err != nil {
+//         return fmt.Errorf("error saving comment: %v", err)
+//     }
+//     return nil
+// }
 
 func DBaddComment(idStage int, idStatusStage int, comment string) error {
 	conn := db.GetDB()
