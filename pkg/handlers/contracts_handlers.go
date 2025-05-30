@@ -497,18 +497,18 @@ func PutChangeContract(w http.ResponseWriter, r *http.Request) {
 	}
 
 	contract := models.Contracts{
-		Id_contract:          id,
-		Name_contract:        updateData.Name_contract,
-		Date_conclusion:      updateData.Date_conclusion,
-		Date_end:             updateData.Date_end,
-		Id_type:              updateData.Id_type,
-		Cost:                 updateData.Cost,
-		Object_contract:      updateData.Object_contract,
-		Term_payment:         updateData.Term_payment,
-		Id_counterparty:      updateData.Id_counterparty,
-		Id_status_contract:   updateData.Id_status_contract,
-		Notes:                updateData.Notes,
-		Conditions:           updateData.Conditions,
+		Id_contract:        id,
+		Name_contract:      updateData.Name_contract,
+		Date_conclusion:    updateData.Date_conclusion,
+		Date_end:           updateData.Date_end,
+		Id_type:            updateData.Id_type,
+		Cost:               updateData.Cost,
+		Object_contract:    updateData.Object_contract,
+		Term_payment:       updateData.Term_payment,
+		Id_counterparty:    updateData.Id_counterparty,
+		Id_status_contract: updateData.Id_status_contract,
+		Notes:              updateData.Notes,
+		Conditions:         updateData.Conditions,
 	}
 
 	err = db.DBchangeContract(contract)
