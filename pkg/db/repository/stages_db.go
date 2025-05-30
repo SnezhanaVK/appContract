@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/jackc/pgx"
 )
@@ -72,12 +73,12 @@ JOIN status_stages ss ON hs.id_status_stage = ss.id_status_stage`)
 }
 
 func DBgetStageByContractID(id_contract int) ([]models.Stages, error) {
-	conn := db.GetDB()
-	if conn == nil {
-		return nil, errors.New("DB connection is nil")
-	}
+    conn := db.GetDB()
+    if conn == nil {
+        return nil, errors.New("DB connection is nil")
+    }
 
-	rows, err := conn.Query(context.Background(), `
+    rows, err := conn.Query(context.Background(), `
         SELECT 
             s.id_stage,
             s.name_stage,
@@ -93,10 +94,14 @@ func DBgetStageByContractID(id_contract int) ([]models.Stages, error) {
             c.date_create_contract,
             latest_status.id_status_stage,
             ss.name_status_stage,
-            latest_status.data_change_status
+            latest_status.data_change_status,
+            contract_user.surname AS contract_surname,
+            contract_user.username AS contract_username,
+            contract_user.patronymic AS contract_patronymic
         FROM stages s
         JOIN contracts c ON s.id_contract = c.id_contract
         JOIN users u ON s.id_user = u.id_user
+        JOIN users contract_user ON c.id_user = contract_user.id_user
         JOIN (
             SELECT 
                 hs.id_stage,
@@ -110,42 +115,45 @@ func DBgetStageByContractID(id_contract int) ([]models.Stages, error) {
         ORDER BY s.id_stage
     `, id_contract)
 
-	if err != nil {
-		return nil, fmt.Errorf("query failed: %w", err)
-	}
-	defer rows.Close()
+    if err != nil {
+        return nil, fmt.Errorf("query failed: %w", err)
+    }
+    defer rows.Close()
 
-	var stages []models.Stages
-	for rows.Next() {
-		var stage models.Stages
-		err := rows.Scan(
-			&stage.Id_stage,
-			&stage.Name_stage,
-			&stage.Id_user,
-			&stage.Surname,
-			&stage.Username,
-			&stage.Patronymic,
-			&stage.Description,
-			&stage.Data_create,
-			&stage.Date_create_end,
-			&stage.Id_contract,
-			&stage.Name_contract,
-			&stage.Data_contract_create,
-			&stage.Id_status_stage,
-			&stage.Name_status_stage,
-			&stage.Date_change_status,
-		)
-		if err != nil {
-			return nil, fmt.Errorf("scan failed: %w", err)
-		}
-		stages = append(stages, stage)
-	}
+    var stages []models.Stages
+    for rows.Next() {
+        var stage models.Stages
+        err := rows.Scan(
+            &stage.Id_stage,
+            &stage.Name_stage,
+            &stage.Id_user,
+            &stage.Surname,
+            &stage.Username,
+            &stage.Patronymic,
+            &stage.Description,
+            &stage.Date_create_start,
+            &stage.Date_create_end,
+            &stage.Id_contract,
+            &stage.Name_contract,
+            &stage.Data_contract_create,
+            &stage.Id_status_stage,
+            &stage.Name_status_stage,
+            &stage.Date_change_status,
+            &stage.ContractSurname,
+            &stage.ContractUsername,
+            &stage.ContractPatronymic,
+        )
+        if err != nil {
+            return nil, fmt.Errorf("scan failed: %w", err)
+        }
+        stages = append(stages, stage)
+    }
 
-	if err = rows.Err(); err != nil {
-		return nil, fmt.Errorf("rows error: %w", err)
-	}
+    if err = rows.Err(); err != nil {
+        return nil, fmt.Errorf("rows error: %w", err)
+    }
 
-	return stages, nil
+    return stages, nil
 }
 
 func DBgetStageUserID(user_id int) ([]models.Stages, error) {
@@ -395,32 +403,62 @@ func DBaddFile(file models.File) error {
 
 	return err
 }
-func DBaddStage(stage models.Stages) error {
-	conn := db.GetDB()
-	if conn == nil {
-		return errors.New("DB connection is nil")
-	}
+func DBaddStage(stage models.Stages) (int, error) {
+    conn := db.GetDB()
+    if conn == nil {
+        return 0, errors.New("DB connection is nil")
+    }
 
-	_, err := conn.Exec(context.Background(), `INSERT INTO stages(
-    name_stage,
-    id_user,
-    description,
-    date_create_start,
-    date_create_end,
-    id_contract
-    )VALUES ($1,$2,$3,$4,$5,$6)`,
-		stage.Name_stage,
-		stage.Id_user,
-		stage.Description,
-		stage.Date_create_start,
-		stage.Date_create_end,
-		stage.Id_contract)
+    // Начинаем транзакцию
+    tx, err := conn.Begin(context.Background())
+    if err != nil {
+        return 0, fmt.Errorf("failed to begin transaction: %v", err)
+    }
+    defer tx.Rollback(context.Background())
 
-	if err != nil {
-		log.Fatal(err)
-	}
-	return nil
+    // Вставляем запись в stages и получаем ID новой записи
+    var stageID int
+    err = tx.QueryRow(context.Background(), `
+        INSERT INTO stages(
+            name_stage,
+            id_user,
+            description,
+            date_create_start,
+            date_create_end,
+            id_contract
+        ) VALUES ($1, $2, $3, $4, $5, $6)
+        RETURNING id_stage`,
+        stage.Name_stage,
+        stage.Id_user,
+        stage.Description,
+        stage.Date_create_start,
+        stage.Date_create_end,
+        stage.Id_contract).Scan(&stageID)
 
+    if err != nil {
+        return 0, fmt.Errorf("failed to insert stage: %v", err)
+    }
+
+    // Добавляем начальный статус (1) в историю статусов
+    _, err = tx.Exec(context.Background(), `
+        INSERT INTO history_status(
+            id_stage,
+            id_status_stage,
+            data_change_status
+        ) VALUES ($1, 1, $2)`,
+        stageID,
+        time.Now().Format("2006-01-02")) // Форматируем дату для поля date
+
+    if err != nil {
+        return 0, fmt.Errorf("failed to insert status history: %v", err)
+    }
+
+    // Фиксируем транзакцию
+    if err := tx.Commit(context.Background()); err != nil {
+        return 0, fmt.Errorf("failed to commit transaction: %v", err)
+    }
+
+    return stageID, nil
 }
 
 func DBaddComment(idStage int, idStatusStage int, comment string) error {

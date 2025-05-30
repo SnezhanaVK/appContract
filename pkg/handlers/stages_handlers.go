@@ -106,6 +106,9 @@ func GetStagesByIdContract(w http.ResponseWriter, r *http.Request) {
 		"date_create_start":    stage.Date_create_start,
 		"date_create_end":      stage.Date_create_end,
 		"id_contract":          stage.Id_contract,
+		"contract_surname":     stage.ContractSurname,
+		"contract_username":    stage.ContractUsername,
+		"contract_patronymic":  stage.ContractPatronymic,
 		})
 	}
 
@@ -445,25 +448,42 @@ func PostFileToStage(w http.ResponseWriter, r *http.Request) {
 }
 
 func PostCreateStage(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Invalid request method CreateStage", http.StatusBadRequest)
-		return
-	}
-	var stage models.Stages
-	err := json.NewDecoder(r.Body).Decode(&stage)
-	if err != nil {
-		log.Panicln(err)
-		http.Error(w, "Invalid request body CreateStage", http.StatusBadRequest)
-		return
-	}
-	err = db.DBaddStage(stage)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]string{"message": "Stage created successfully"})
+    if r.Method != http.MethodPost {
+        http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+        return
+    }
+
+    var stage models.Stages
+    err := json.NewDecoder(r.Body).Decode(&stage)
+    if err != nil {
+        log.Printf("Invalid request body: %v", err)
+        http.Error(w, "Invalid request body", http.StatusBadRequest)
+        return
+    }
+
+    id, err := db.DBaddStage(stage)
+    if err != nil {
+        log.Printf("Failed to create stage: %v", err)
+        http.Error(w, "Failed to create stage", http.StatusInternalServerError)
+        return
+    }
+
+    // Формируем ответ с ID созданного этапа
+    response := struct {
+        Message string `json:"message"`
+        ID      int    `json:"id_stage"`
+    }{
+        Message: "Stage created successfully",
+        ID:      id,
+    }
+
+    w.Header().Set("Content-Type", "application/json")
+    w.WriteHeader(http.StatusCreated)
+    if err := json.NewEncoder(w).Encode(response); err != nil {
+        log.Printf("Failed to encode response: %v", err)
+    }
 }
+
 
 func PostAddComment(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
