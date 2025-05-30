@@ -359,8 +359,7 @@ func GetContractID(w http.ResponseWriter, r *http.Request) {
 		"date_conclusion":      contract.Date_conclusion,
 		"date_end":             contract.Date_end,
 		"name_type_contract":   contract.Name_type,
-		"id_counterparty":      contract.Id_counterparty,
-		"name_counterparty":    contract.Name_counterparty,
+		
 		"name_status_contract": contract.Name_status_contract,
 		"notes":                contract.Notes,
 		"conditions":           contract.Conditions,
