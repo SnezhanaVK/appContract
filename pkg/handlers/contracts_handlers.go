@@ -46,6 +46,7 @@ func GetAllContracts(w http.ResponseWriter, r *http.Request) {
 			"date_contract_create": contract.Date_contract_create,
 			"date_end":             contract.Date_end,
 			"name_type_contract":   contract.Name_type,
+			"id_counterparty":      contract.Id_counterparty,
 			"name_counterparty":    contract.Name_counterparty,
 			"name_status_contract": contract.Name_status_contract,
 			"tegs":                 tags,
@@ -358,6 +359,7 @@ func GetContractID(w http.ResponseWriter, r *http.Request) {
 		"date_conclusion":      contract.Date_conclusion,
 		"date_end":             contract.Date_end,
 		"name_type_contract":   contract.Name_type,
+		"id_counterparty":      contract.Id_counterparty,
 		"name_counterparty":    contract.Name_counterparty,
 		"name_status_contract": contract.Name_status_contract,
 		"notes":                contract.Notes,
@@ -495,18 +497,18 @@ func PutChangeContract(w http.ResponseWriter, r *http.Request) {
 	}
 
 	contract := models.Contracts{
-		Id_contract:          id,
-		Name_contract:        updateData.Name_contract,
-		Date_conclusion:      updateData.Date_conclusion,
-		Date_end:             updateData.Date_end,
-		Id_type:              updateData.Id_type,
-		Cost:                 updateData.Cost,
-		Object_contract:      updateData.Object_contract,
-		Term_payment:         updateData.Term_payment,
-		Id_counterparty:      updateData.Id_counterparty,
-		Id_status_contract:   updateData.Id_status_contract,
-		Notes:                updateData.Notes,
-		Conditions:           updateData.Conditions,
+		Id_contract:        id,
+		Name_contract:      updateData.Name_contract,
+		Date_conclusion:    updateData.Date_conclusion,
+		Date_end:           updateData.Date_end,
+		Id_type:            updateData.Id_type,
+		Cost:               updateData.Cost,
+		Object_contract:    updateData.Object_contract,
+		Term_payment:       updateData.Term_payment,
+		Id_counterparty:    updateData.Id_counterparty,
+		Id_status_contract: updateData.Id_status_contract,
+		Notes:              updateData.Notes,
+		Conditions:         updateData.Conditions,
 	}
 
 	err = db.DBchangeContract(contract)

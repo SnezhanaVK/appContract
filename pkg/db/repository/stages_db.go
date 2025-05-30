@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	"log"
 	"time"
 
@@ -229,67 +230,65 @@ func DBgetStageUserID(user_id int) ([]models.Stages, error) {
 }
 
 func DBgetStageID(stage_id int) (models.Stages, error) {
-	conn := db.GetDB()
-	if conn == nil {
-		return models.Stages{}, errors.New("DB connection is nil")
-	}
+    conn := db.GetDB()
+    if conn == nil {
+        return models.Stages{}, errors.New("DB connection is nil")
+    }
 
-	rows, err := conn.Query(context.Background(), `SELECT 
-    s.id_stage,
-    s.name_stage,
-    s.id_user,
-    u.surname,
-    u.username,
-    u.patronymic,
-    u.phone,
-    u.email,
-    s.description,
-    hs.id_status_stage,
-    ss.name_status_stage,
-    s.date_create_start,
-    s.date_create_end,
-    s.id_contract,
-    c.name_contract,
-    c.date_create_contract,
-    t.id_type_contract,
-    t.name_type_contract
-FROM stages s
-JOIN history_status hs ON s.id_stage = hs.id_stage
-JOIN users u ON s.id_user = u.id_user
-JOIN contracts c ON s.id_contract = c.id_contract
-JOIN types_contracts t ON c.id_type = t.id_type_contract
-JOIN status_stages ss ON hs.id_status_stage = ss.id_status_stage 
-WHERE s.id_stage=$1`, stage_id)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer rows.Close()
+    // Проверяем существование этапа
+    var exists bool
+    err := conn.QueryRow(context.Background(), 
+        "SELECT EXISTS(SELECT 1 FROM stages WHERE id_stage = $1)", 
+        stage_id).Scan(&exists)
+    if err != nil {
+        return models.Stages{}, fmt.Errorf("existence check failed: %v", err)
+    }
+    if !exists {
+        return models.Stages{}, fmt.Errorf("stage with id %d does not exist", stage_id)
+    }
 
-	var stage models.Stages
-	for rows.Next() {
-		err = rows.Scan(&stage.Id_stage,
-			&stage.Name_stage,
-			&stage.Id_user,
-			&stage.Surname,
-			&stage.Username,
-			&stage.Patronymic,
-			&stage.Phone,
-			&stage.Email,
-			&stage.Description,
-			&stage.Id_status_stage,
-			&stage.Name_status_stage,
-			&stage.Date_create_start,
-			&stage.Date_create_end,
-			&stage.Id_contract,
-			&stage.Name_contract,
-			&stage.Data_contract_create,
-			&stage.Id_type_contract,
-			&stage.Name_type_contract)
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
-	return stage, nil
+    // Основной запрос с обработкой возможных NULL значений
+    query := `
+    SELECT 
+        s.id_stage,
+        s.name_stage,
+        s.id_user,
+        COALESCE(u.surname, '') as surname,
+        COALESCE(u.username, '') as username,
+        COALESCE(u.patronymic, '') as patronymic,
+        s.description,
+        COALESCE(hs.id_status_stage, 0) as id_status_stage,
+        COALESCE(ss.name_status_stage, '') as name_status_stage,
+        s.date_create_start,
+        s.date_create_end,
+        s.id_contract
+    FROM stages s
+    LEFT JOIN users u ON s.id_user = u.id_user
+    LEFT JOIN history_status hs ON s.id_stage = hs.id_stage
+    LEFT JOIN status_stages ss ON hs.id_status_stage = ss.id_status_stage
+    WHERE s.id_stage = $1`
+
+    var stage models.Stages
+    err = conn.QueryRow(context.Background(), query, stage_id).Scan(
+        &stage.Id_stage,
+        &stage.Name_stage,
+        &stage.Id_user,
+        &stage.Surname,
+        &stage.Username,
+        &stage.Patronymic,
+        &stage.Description,
+        &stage.Id_status_stage,
+        &stage.Name_status_stage,
+        &stage.Date_create_start,
+        &stage.Date_create_end,
+        &stage.Id_contract,
+    )
+
+    if err != nil {
+        return models.Stages{}, fmt.Errorf("query failed: %v", err)
+    }
+
+    return stage, nil
 }
 func DBgetFileIDStageID(id_stage int, id_file int) (models.File, error) {
 	conn := db.GetDB()
@@ -460,6 +459,44 @@ func DBaddStage(stage models.Stages) (int, error) {
 
     return stageID, nil
 }
+// func DBaddComment(idStage int, idStatusStage int, comment string) error {
+//     if strings.TrimSpace(comment) == "" {
+//         return errors.New("comment cannot be empty")
+//     }
+
+//     conn := db.GetDB()
+//     if conn == nil {
+//         return errors.New("DB connection is nil")
+//     }
+
+//     // Экранируем HTML и удаляем опасные конструкции
+//     cleanedComment := html.EscapeString(comment)
+    
+//     // Дополнительная очистка от javascript:
+//     cleanedComment = strings.ReplaceAll(cleanedComment, "javascript:", "")
+//     cleanedComment = strings.ReplaceAll(cleanedComment, "JAVASCRIPT:", "")
+    
+//     var idHistoryState int
+//     err := conn.QueryRow(context.Background(), 
+//         `SELECT id_history_status FROM history_status 
+//         WHERE id_stage = $1 AND id_status_stage = $2`,
+//         idStage, idStatusStage).Scan(&idHistoryState)
+
+//     if err != nil {
+//         return fmt.Errorf("error finding history status: %v", err)
+//     }
+
+//     // Используем параметризованный запрос для защиты от SQL-инъекций
+//     _, err = conn.Exec(context.Background(), 
+//         `INSERT INTO comments (id_history_status, comment, date_create_comment) 
+//         VALUES ($1, $2, NOW())`,
+//         idHistoryState, cleanedComment)
+
+//     if err != nil {
+//         return fmt.Errorf("error saving comment: %v", err)
+//     }
+//     return nil
+// }
 
 func DBaddComment(idStage int, idStatusStage int, comment string) error {
 	conn := db.GetDB()

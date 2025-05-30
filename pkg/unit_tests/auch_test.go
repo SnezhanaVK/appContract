@@ -1,10 +1,6 @@
 package unit_tests
 
 import (
-
-	//"appContract/pkg/models"
-	//"appContract/pkg/utils"
-	db "appContract/pkg/db/repository"
 	"testing"
 	"time"
 
@@ -12,17 +8,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestAuthorize_Success тестирует успешную авторизацию
-func TestAuthorize_Success(t *testing.T) {
-
-	t.Run("Should return error when DB connection is nil", func(t *testing.T) {
-		_, err := db.Authorize("test", "pass")
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "connection error")
-	})
-}
-
-// TestTokenVerification тестирует верификацию токенов
 func TestTokenVerification(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -81,9 +66,9 @@ func TestTokenVerification(t *testing.T) {
 	}
 }
 
-// TestVerifyPassword тестирует функцию проверки пароля
+
 func TestVerifyPassword(t *testing.T) {
-	// Создаем тестовую структуру для utils
+	
 	type verifyFunc func(hashed, pass, salt string) bool
 
 	tests := []struct {

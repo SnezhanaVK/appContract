@@ -1,256 +1,95 @@
 package unit_tests
 
-// import (
-// 	"appContract/pkg/db"
-// 	"appContract/pkg/utils"
-// 	"context"
-// 	"testing"
+import (
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
 
-// 	"github.com/jackc/pgx"
-// 	"github.com/stretchr/testify/assert"
-// 	"github.com/stretchr/testify/mock"
-// 	"github.com/stretchr/testify/require"
-// )
+	"appContract/pkg/db"
+	// repository "appContract/pkg/db/repository"
+	"appContract/pkg/handlers"
 
-// // func TestSQLInjectionProtection(t *testing.T) {
-// // 	// Сохраняем оригинальное подключение к БД
-// // 	origGetDB := db.GetDB
-// // 	defer func() { db.GetDB = origGetDB }()
+	"github.com/jackc/pgx/v5/pgxpool"
+)
 
-// // 	// Создаем мок подключения
-// // 	mockConn := new(MockPgxConn)
-// // 	db.GetDB = func() *pgx.Conn {
-// // 		return mockConn
-// // 	}
+// Глобальная переменная для хранения экземпляра пула базы данных
+var dbPool *pgxpool.Pool
 
-// // 	testCases := []struct {
-// // 		name     string
-// // 		input    string
-// // 		expected string
-// // 	}{
-// // 		{"Basic input", "normal_input", "normal_input"},
-// // 		{"SQL injection attempt", "admin' OR '1'='1", "admin' OR '1'='1"},
-// // 		{"Semicolon attack", "'; DROP TABLE users;--", "'; DROP TABLE users;--"},
-// // 	}
+// Функция для установки связи с базой данных перед каждым набором тестов
+func TestMain(m *testing.M) {
+    // Сначала устанавливаем соединение с базой данных
+    db.ConnectDB()
+    defer db.CloseDB()
 
-// // 	for _, tc := range testCases {
-// // 		t.Run(tc.name, func(t *testing.T) {
-// // 			// Настраиваем мок для возврата ожидаемого значения
-// // 			mockRow := new(pgx.Row)
-// // 			mockConn.On("QueryRow", context.Background(), "SELECT $1::text", []interface{}{tc.input}).
-// // 				Return(mockRow).
-// // 				Run(func(args mock.Arguments) {
-// // 					// Симулируем работу Scan
-// // 					row := args.Get(0).(*pgx.Row)
-// // 					*row = pgx.Row{}
-// // 					row.Scan = func(dest ...interface{}) error {
-// // 						*dest[0].(*string) = tc.input
-// // 						return nil
-// // 					}
-// // 				})
+    // Выполняем сами тесты
+    code := m.Run()
 
-// // 			var result string
-// // 			err := mockConn.QueryRow(context.Background(), "SELECT $1::text", tc.input).Scan(&result)
+    // Завершаем выполнение программы с результатом выполнения тестов
+    if code > 0 {
+        panic("Tests failed.")
+    }
+}
 
-// // 			assert.NoError(t, err)
-// // 			assert.Equal(t, tc.expected, result)
-// // 			mockConn.AssertExpectations(t)
-// // 		})
-// // 	}
-// // }
 
-// func TestXSSProtection(t *testing.T) {
-// 	// Сохраняем оригинальное подключение к БД
-// 	origGetDB := db.GetDB
-// 	defer func() { db.GetDB = origGetDB }()
 
-// 	// Создаем мок подключения
-// 	mockConn := new(MockPgxConn)
-// 	db.GetDB = func() *pgx.Conn {
-// 		return mockConn
-// 	}
+func TestSQLInjectionInLogin(t *testing.T) {
+    // Тестирование входа с SQL-инъекцией
+    payload := `{
+        "login": "admin'--",
+        "password": "anything"
+    }`
+    req, err := http.NewRequest("POST", "/api/authorizations", strings.NewReader(payload))
+    if err != nil {
+        t.Fatal(err)
+    }
 
-// 	testCases := []struct {
-// 		name     string
-// 		input    string
-// 		expected string
-// 	}{
-// 		{"Safe input", "Hello world", "Hello world"},
-// 		{"Script tag", "<script>alert('XSS')</script>", "<script>alert('XSS')</script>"},
-// 		{"Image XSS", "<img src=x onerror=alert('XSS')>", "<img src=x onerror=alert('XSS')>"},
-// 	}
+    rr := httptest.NewRecorder()
+    handler := http.HandlerFunc(handlers.Login)
 
-// 	for _, tc := range testCases {
-// 		t.Run(tc.name, func(t *testing.T) {
-// 			// Настраиваем мок
-// 			mockRow := new(pgx.Row)
-// 			mockConn.On("QueryRow", context.Background(), "SELECT $1::text", []interface{}{tc.input}).
-// 				Return(mockRow).
-// 				Run(func(args mock.Arguments) {
-// 					row := args.Get(0).(*pgx.Row)
-// 					*row = pgx.Row{}
-// 					row.Scan = func(dest ...interface{}) error {
-// 						*dest[0].(*string) = tc.input
-// 						return nil
-// 					}
-// 				})
+    handler.ServeHTTP(rr, req)
 
-// 			var result string
-// 			err := mockConn.QueryRow(context.Background(), "SELECT $1::text", tc.input).Scan(&result)
+    // Проверка статуса HTTP-запроса
+    if status := rr.Code; status == http.StatusOK {
+        t.Errorf("handler returned wrong status code: got %v want %v",
+            status, http.StatusUnauthorized)
+    }
 
-// 			assert.NoError(t, err)
-// 			assert.Equal(t, tc.expected, result)
-// 			mockConn.AssertExpectations(t)
-// 		})
-// 	}
-// }
+    // Проверка наличия технической информации об ошибке
+    if strings.Contains(rr.Body.String(), "SQL syntax") {
+        t.Error("handler returned SQL error details, potential security risk")
+    }
+}
 
-// func TestPasswordHashing(t *testing.T) {
-// 	// Сохраняем оригинальные функции для восстановления после теста
-// 	origGenerateSalt := utils.GenerateSalt
-// 	origHashPassword := utils.HashPassword
-// 	origVerifyPassword := utils.VerifyPassword
-// 	defer func() {
-// 		utils.GenerateSalt = origGenerateSalt
-// 		utils.HashPassword = origHashPassword
-// 		utils.VerifyPassword = origVerifyPassword
-// 	}()
 
-// 	// Подменяем функции для тестов
-// 	utils.GenerateSalt = func(length int) (string, error) {
-// 		return "fixed-salt-for-tests", nil
-// 	}
+func TestSensitiveDataExposure(t *testing.T) {
+    // Проверяем отсутствие утечки чувствительных данных в API
+    req, err := http.NewRequest("GET", "/api/users/1", nil)
+    if err != nil {
+        t.Fatal(err)
+    }
 
-// 	utils.HashPassword = func(password, salt string) (string, error) {
-// 		// Простая детерминированная хеш-функция для тестов
-// 		return password + "|" + salt, nil
-// 	}
+    rr := httptest.NewRecorder()
+    handler := http.HandlerFunc(handlers.GetUserID)
 
-// 	utils.VerifyPassword = func(hashed, password, salt string) bool {
-// 		expected, _ := utils.HashPassword(password, salt)
-// 		return hashed == expected
-// 	}
+    handler.ServeHTTP(rr, req)
 
-// 	testCases := []struct {
-// 		name     string
-// 		password string
-// 	}{
-// 		{"Simple password", "password123"},
-// 		{"Complex password", "P@ssw0rd!123"},
-// 		{"Long password", "verylongpasswordwith1234567890and!@#$%^&*()"},
-// 		{"Empty password", ""},
-// 	}
+    // Проверяем, что ответ не содержит конфиденциальных полей
+    responseBody := rr.Body.String()
+    sensitiveFields := []string{
+        "password_hash",
+        "salt",
+        "password_algorithm",
+    }
 
-// 	for _, tc := range testCases {
-// 		t.Run(tc.name, func(t *testing.T) {
-// 			salt, err := utils.GenerateSalt(16)
-// 			require.NoError(t, err)
+    for _, field := range sensitiveFields {
+        if strings.Contains(responseBody, field) {
+            t.Errorf("sensitive field '%s' exposed in API response", field)
+        }
+    }
 
-// 			hashed1, err := utils.HashPassword(tc.password, salt)
-// 			require.NoError(t, err)
-// 			require.NotEmpty(t, hashed1)
-
-// 			hashed2, err := utils.HashPassword(tc.password, salt)
-// 			require.NoError(t, err)
-// 			assert.Equal(t, hashed1, hashed2, "Same password+salt should produce same hash")
-
-// 			// Проверка верификации
-// 			assert.True(t, utils.VerifyPassword(hashed1, tc.password, salt))
-// 			assert.False(t, utils.VerifyPassword(hashed1, "wrongpassword", salt))
-
-// 			// Проверка с другой солью
-// 			newSalt := "different-salt"
-// 			newHashed, err := utils.HashPassword(tc.password, newSalt)
-// 			require.NoError(t, err)
-// 			assert.NotEqual(t, hashed1, newHashed, "Different salt should produce different hash")
-// 		})
-// 	}
-// }
-
-// func TestAuthorize(t *testing.T) {
-// 	// Сохраняем оригинальные зависимости
-// 	origGetDB := db.GetDB
-// 	origVerifyPassword := utils.VerifyPassword
-// 	defer func() {
-// 		db.GetDB = origGetDB
-// 		utils.VerifyPassword = origVerifyPassword
-// 	}()
-
-// 	// Создаем мок подключения
-// 	mockConn := new(MockPgxConn)
-// 	db.GetDB = func() *pgx.Conn {
-// 		return mockConn
-// 	}
-
-// 	// Настраиваем мок для проверки пароля
-// 	utils.VerifyPassword = func(hashedPassword, inputPassword, salt string) bool {
-// 		return inputPassword == "correctpassword"
-// 	}
-
-// 	t.Run("Successful authorization", func(t *testing.T) {
-// 		// Мок для запроса пользователя
-// 		userRow := new(pgx.Row)
-// 		mockConn.On("QueryRow", context.Background(), mock.Anything, []interface{}{"testuser"}).
-// 			Return(userRow).
-// 			Run(func(args mock.Arguments) {
-// 				row := args.Get(0).(*pgx.Row)
-// 				*row = pgx.Row{}
-// 				row.Scan = func(dest ...interface{}) error {
-// 					*(dest[0].(*int)) = 1               // id_user
-// 					*(dest[1].(*string)) = "Doe"        // surname
-// 					*(dest[2].(*string)) = "John"       // username
-// 					*(dest[3].(*string)) = ""           // patronymic
-// 					*(dest[4].(*string)) = ""           // phone
-// 					*(dest[5].(*string)) = ""           // email
-// 					*(dest[6].(*string)) = "testuser"   // login
-// 					*(dest[7].(*string)) = "hashedpass" // password_hash
-// 					*(dest[8].(*string)) = "salt"       // salt
-// 					return nil
-// 				}
-// 			})
-
-// 		// Мок для запроса ролей
-// 		mockRows := new(pgx.Rows)
-// 		mockConn.On("Query", context.Background(), mock.Anything, []interface{}{1}).
-// 			Return(mockRows, nil).
-// 			Run(func(args mock.Arguments) {
-// 				rows := args.Get(0).(*pgx.Rows)
-// 				*rows = pgx.Rows{}
-// 				rows.NextFunc = func() bool {
-// 					rows.ScanFunc = func(dest ...interface{}) error {
-// 						*(dest[0].(*int)) = 1          // id_role
-// 						*(dest[1].(*string)) = "admin" // name_role
-// 						return nil
-// 					}
-// 					return true
-// 				}
-// 			})
-
-// 		user, err := db.Authorize("testuser", "correctpassword")
-// 		assert.NoError(t, err)
-// 		assert.Equal(t, 1, user.Id_user)
-// 		assert.Equal(t, "testuser", user.Login)
-// 		assert.True(t, user.Admin)
-// 	})
-
-// 	t.Run("Invalid password", func(t *testing.T) {
-// 		userRow := new(pgx.Row)
-// 		mockConn.On("QueryRow", context.Background(), mock.Anything, []interface{}{"testuser"}).
-// 			Return(userRow).
-// 			Run(func(args mock.Arguments) {
-// 				row := args.Get(0).(*pgx.Row)
-// 				*row = pgx.Row{}
-// 				row.Scan = func(dest ...interface{}) error {
-// 					*(dest[7].(*string)) = "hashedpass" // password_hash
-// 					*(dest[8].(*string)) = "salt"       // salt
-// 					return nil
-// 				}
-// 			})
-
-// 		_, err := db.Authorize("testuser", "wrongpassword")
-// 		assert.Error(t, err)
-// 		assert.Equal(t, "invalid password", err.Error())
-// 	})
-
-// 	mockConn.AssertExpectations(t)
-// }
+    // Проверяем отсутствие пароля в хэшированной форме
+    if strings.Contains(responseBody, "$2a$") { // Префикс Bcrypt-хэшей
+        t.Error("password hash exposed in API response")
+    }
+}

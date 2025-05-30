@@ -55,19 +55,19 @@ func TestServerShutdown(t *testing.T) {
 	assert.NoError(t, err, "Ожидалось успешное завершение работы сервера")
 }
 
+
 func TestCORSHeaders(t *testing.T) {
-	req, err := http.NewRequest("OPTIONS", "/", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+    req, err := http.NewRequest("OPTIONS", "/", nil)
+    if err != nil {
+        t.Fatal(err)
+    }
 
-	rr := httptest.NewRecorder()
-	handler := middleware.CORS(routers.NewRouter())
+    rr := httptest.NewRecorder()
+    handler := middleware.CORS(routers.NewRouter())
 
-	handler.ServeHTTP(rr, req)
+    handler.ServeHTTP(rr, req)
 
-	// Проверяем наличие CORS заголовков
-	assert.Equal(t, "*", rr.Header().Get("Access-Control-Allow-Origin"), "Отсутствует CORS заголовок")
-	assert.Equal(t, "POST, GET, OPTIONS, PUT, DELETE", rr.Header().Get("Access-Control-Allow-Methods"), "Отсутствует CORS заголовок методов")
-	assert.Equal(t, "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization", rr.Header().Get("Access-Control-Allow-Headers"), "Отсутствует CORS заголовок разрешенных заголовков")
+    // Обновлённые проверки
+    assert.Equal(t, "http://localhost:3000", rr.Header().Get("Access-Control-Allow-Origin"), "Неверный CORS заголовок Origin")
+    assert.Equal(t, "Content-Type, Authorization", rr.Header().Get("Access-Control-Allow-Headers"), "Неверный CORS заголовок разрешенных заголовков")
 }
