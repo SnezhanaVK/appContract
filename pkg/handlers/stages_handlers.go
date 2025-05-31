@@ -484,6 +484,44 @@ func PostCreateStage(w http.ResponseWriter, r *http.Request) {
     }
 }
 
+func PutChangeStage(w http.ResponseWriter, r *http.Request) {
+    if r.Method != http.MethodPut {
+        http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+        return
+    }
+
+    vars := mux.Vars(r)
+    stageID, err := strconv.Atoi(vars["id_stage"])
+    if err != nil {
+        http.Error(w, "Invalid stage ID", http.StatusBadRequest)
+        return
+    }
+
+    var stage models.Stages    
+    err = json.NewDecoder(r.Body).Decode(&stage)
+    if err != nil {
+        log.Printf("Invalid request body: %v", err)
+        http.Error(w, "Invalid request body", http.StatusBadRequest)
+        return
+    }
+    if stage.Id_stage != 0 && stage.Id_stage != stageID {
+        http.Error(w, "Stage ID in URL does not match ID in request body", http.StatusBadRequest)
+        return
+    }
+
+   
+    stage.Id_stage = stageID
+
+    err = db.DBchangeStage(stageID, stage)
+    if err != nil {
+        log.Printf("Failed to update stage: %v", err)
+        http.Error(w, "Failed to update stage", http.StatusInternalServerError)
+        return
+    }
+
+    w.WriteHeader(http.StatusOK)
+    json.NewEncoder(w).Encode(map[string]string{"message": "Stage updated successfully"})
+}
 
 func PostAddComment(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
