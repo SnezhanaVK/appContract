@@ -234,6 +234,8 @@ CONSTRAINT fk_notification_settings FOREIGN KEY (id_notification_settings) REFER
     id_history_status int NOT NULL,
     comment VARCHAR(1000) NOT NULL,
     date_create_comment date NOT NULL,
+	id_user int NOT NULL,
+	CONSTRAINT id_user FOREIGN KEY (id_user) REFERENCES users(id_user),
  CONSTRAINT id_history_status FOREIGN KEY (id_history_status) REFERENCES history_status(id_history_status)
 )`)
 		if err != nil {

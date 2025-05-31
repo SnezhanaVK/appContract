@@ -468,7 +468,7 @@ func DBaddStage(stage models.Stages) (int, error) {
     return stageID, nil
 }
 
-func DBaddComment(idStage int, idStatusStage int, comment string) error {
+func DBaddComment(idStage int, idStatusStage int, comment string, idUser int) error {
 	conn := db.GetDB()
 	if conn == nil {
 		return errors.New("DB connection is nil")
@@ -484,10 +484,11 @@ func DBaddComment(idStage int, idStatusStage int, comment string) error {
 		log.Fatal(err)
 	}
 
-	_, err = conn.Exec(context.Background(), `INSERT INTO comments (id_history_status, comment, date_create_comment)
-        VALUES ($1, $2, NOW())`,
+	_, err = conn.Exec(context.Background(), `INSERT INTO comments (id_history_status, comment, id_user, date_create_comment)
+        VALUES ($1, $2, $3, NOW())`,
 		idHistoryState,
-		comment)
+		comment,
+		idUser)
 
 	if err != nil {
 		log.Fatal(err)
@@ -503,16 +504,22 @@ func DBgetComment(id_stage int) ([]models.Stages, error) {
 
 	rows, err := conn.Query(context.Background(), `
         SELECT 
-            c.id_comment,
-            c.id_history_status,
-            c.comment,
-            c.date_create_comment,
-            hs.id_stage,
-            hs.id_status_stage
-        FROM comments c
-        JOIN history_status hs ON c.id_history_status = hs.id_history_status
-        WHERE hs.id_stage = $1
-    `, id_stage)
+    c.id_comment,
+    c.id_history_status,
+    c.comment,
+    c.date_create_comment,
+    c.id_user,
+    hs.id_stage,
+    hs.id_status_stage,
+	ss.name_status_stage,
+    u.surname,
+    u.username,
+    u.patronymic
+FROM comments c
+JOIN users u ON c.id_user = u.id_user
+JOIN history_status hs ON c.id_history_status = hs.id_history_status
+JOIN status_stages ss ON hs.id_status_stage = ss.id_status_stage
+WHERE hs.id_stage = $1`, id_stage)
 	if err != nil {
 		return nil, err
 	}
@@ -526,8 +533,14 @@ func DBgetComment(id_stage int) ([]models.Stages, error) {
 			&comment.Id_history_status,
 			&comment.Comment,
 			&comment.Data_create,
+			&comment.Id_user,
 			&comment.Id_stage,
-			&comment.Id_status_stage)
+			&comment.Id_status_stage,
+			&comment.Name_status_stage,
+			&comment.Surname,
+			&comment.Username,
+			&comment.Patronymic,
+		)
 		if err != nil {
 			return nil, err
 		}

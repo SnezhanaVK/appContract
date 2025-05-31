@@ -382,9 +382,14 @@ func GetComments(w http.ResponseWriter, r *http.Request) {
 		commentResponse := map[string]interface{}{
 			"id_history_state": comment.Id_history_status,
 			"id_status_stage":  comment.Id_status_stage,
+			"name_status_stage": comment.Name_status_stage,
 			"id_stage":         comment.Id_stage,
 			"data_create":      comment.Data_create,
 			"comment":          comment.Comment,
+			"id_user":       comment.Id_user,
+			"username":       comment.Username,
+			"patronymic":     comment.Patronymic,
+			"surname":        comment.Surname,
 		}
 		commentsResponse = append(commentsResponse, commentResponse)
 	}
@@ -446,6 +451,7 @@ func PostFileToStage(w http.ResponseWriter, r *http.Request) {
 		"message": "File uploaded successfully",
 		"name":    handler.Filename,
 		"size":    fmt.Sprintf("%d bytes", handler.Size),
+		
 	})
 }
 
@@ -551,7 +557,7 @@ func PostAddComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = db.DBaddComment(idStage, idStatusStage, comment.Comment)
+	err = db.DBaddComment(idStage, idStatusStage, comment.Comment, comment.Id_user)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -560,7 +566,7 @@ func PostAddComment(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	mailer := utils.NewDefaultEmailSender()
 	notificationService := service.NewNotificationService(mailer)
-	if err := notificationService.NotifyStageStatusChange(ctx, idStage, idStatusStage, comment.Comment); err != nil {
+	if err := notificationService.NotifyStageStatusChange(ctx, idStage, idStatusStage, comment.Comment ); err != nil {
 		log.Printf("Error sending notifications: %v", err)
 	}
 
