@@ -249,24 +249,29 @@ func DBgetStageID(stage_id int) (models.Stages, error) {
 
     // Основной запрос с обработкой возможных NULL значений
     query := `
-    SELECT 
-        s.id_stage,
-        s.name_stage,
-        s.id_user,
-        COALESCE(u.surname, '') as surname,
-        COALESCE(u.username, '') as username,
-        COALESCE(u.patronymic, '') as patronymic,
-        s.description,
-        COALESCE(hs.id_status_stage, 0) as id_status_stage,
-        COALESCE(ss.name_status_stage, '') as name_status_stage,
-        s.date_create_start,
-        s.date_create_end,
-        s.id_contract
-    FROM stages s
-    LEFT JOIN users u ON s.id_user = u.id_user
-    LEFT JOIN history_status hs ON s.id_stage = hs.id_stage
-    LEFT JOIN status_stages ss ON hs.id_status_stage = ss.id_status_stage
-    WHERE s.id_stage = $1`
+SELECT 
+    s.id_stage,
+    s.name_stage,
+    s.id_user,
+    COALESCE(u.surname, '') as surname,
+    COALESCE(u.username, '') as username,
+    COALESCE(u.patronymic, '') as patronymic,
+    s.description,
+    COALESCE(hs.id_status_stage, 0) as id_status_stage,
+    COALESCE(ss.name_status_stage, '') as name_status_stage,
+    s.date_create_start,
+    s.date_create_end,
+    s.id_contract,
+    COALESCE(cu.surname, '') as contract_surname,
+    COALESCE(cu.username, '') as contract_username,
+    COALESCE(cu.patronymic, '') as contract_patronymic
+FROM stages s
+LEFT JOIN users u ON s.id_user = u.id_user
+LEFT JOIN history_status hs ON s.id_stage = hs.id_stage
+LEFT JOIN status_stages ss ON hs.id_status_stage = ss.id_status_stage
+LEFT JOIN contracts c ON s.id_contract = c.id_contract
+LEFT JOIN users cu ON c.id_user = cu.id_user
+WHERE s.id_stage = $1`
 
     var stage models.Stages
     err = conn.QueryRow(context.Background(), query, stage_id).Scan(
@@ -282,6 +287,9 @@ func DBgetStageID(stage_id int) (models.Stages, error) {
         &stage.Date_create_start,
         &stage.Date_create_end,
         &stage.Id_contract,
+		&stage.ContractSurname,
+		&stage.ContractUsername,
+		&stage.ContractPatronymic,
     )
 
     if err != nil {

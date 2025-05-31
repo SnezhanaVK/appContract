@@ -214,6 +214,9 @@ func GetStage(w http.ResponseWriter, r *http.Request) {
 		"date_create_start":    stage.Date_create_start,
 		"date_create_end":      stage.Date_create_end,
 		"id_contract":          stage.Id_contract,
+		"contract_surname":     stage.ContractSurname,
+		"contract_username":    stage.ContractUsername,
+		"contract_patronymic":  stage.ContractPatronymic,
 	
 	}
 
@@ -255,7 +258,6 @@ func GetStageFiles(w http.ResponseWriter, r *http.Request) {
 		fileResponse := map[string]interface{}{
 			"id_file":   file.Id_file,
 			"name_file": file.Name_file,
-			"data":      file.Data,
 			"type_file": file.Type_file,
 			"id_stage":  file.Id_stage,
 		}
