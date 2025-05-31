@@ -590,12 +590,14 @@ func DBchangeStage(id_stage int, stage models.Stages) error {
         UPDATE stages SET
             name_stage = $2,
             description = $3,
-            date_create_start = $4,
-            date_create_end = $5
+			id_user = $4,
+            date_create_start = $5,
+            date_create_end = $6
         WHERE id_stage = $1`,
         id_stage,
         stage.Name_stage,
         stage.Description,
+		stage.Id_user,
         stage.Date_create_start,
         stage.Date_create_end,
     )
