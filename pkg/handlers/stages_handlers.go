@@ -592,7 +592,7 @@ func PutStageStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = db.DBChengeStatusStage(stage.Id_stage, stage.Id_status_stage, stage.Comment)
+	err = db.DBChengeStatusStage(stage.Id_stage, stage.Id_status_stage, stage.Comment, stage.Id_user)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

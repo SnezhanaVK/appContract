@@ -548,7 +548,7 @@ WHERE hs.id_stage = $1`, id_stage)
 	}
 	return comments, nil
 }
-func DBChengeStatusStage(id_stage int, id_status_stage int, comment string) error {
+func DBChengeStatusStage(id_stage int, id_status_stage int, comment string, id_user int) error {
 	conn := db.GetDB()
 	if conn == nil {
 		return errors.New("DB connection is nil")
@@ -570,10 +570,11 @@ func DBChengeStatusStage(id_stage int, id_status_stage int, comment string) erro
 		return err
 	}
 
-	_, err = tx.Exec(context.Background(), `INSERT INTO comments (id_history_status, comment, date_create_comment)
-    VALUES ($1, $2, NOW())`,
+	_, err = tx.Exec(context.Background(), `INSERT INTO comments (id_history_status, comment, date_create_comment, id_user)
+    VALUES ($1, $2, NOW(), $3)`,
 		id_history_status,
-		comment)
+		comment,
+		id_user)
 
 	if err != nil {
 		tx.Rollback(context.Background())
