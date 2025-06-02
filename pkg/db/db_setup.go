@@ -220,7 +220,7 @@ CONSTRAINT fk_notification_settings FOREIGN KEY (id_notification_settings) REFER
     id_history_status SERIAL PRIMARY KEY,
     id_stage int NOT NULL,
     id_status_stage int NOT NULL,
-    data_change_status date NOT NULL,
+    data_change_status TIMESTAMP NOT NULL DEFAULT NOW(),
     CONSTRAINT id_stage FOREIGN KEY (id_stage) REFERENCES stages(id_stage),
     CONSTRAINT id_status_stage FOREIGN KEY (id_status_stage) REFERENCES status_stages(id_status_stage) 
 )`)

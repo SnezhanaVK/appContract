@@ -4,6 +4,7 @@ import (
 	"appContract/pkg/db"
 	"appContract/pkg/models"
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 
@@ -103,15 +104,16 @@ func DBgetStageByContractID(id_contract int) ([]models.Stages, error) {
         JOIN contracts c ON s.id_contract = c.id_contract
         JOIN users u ON s.id_user = u.id_user
         JOIN users contract_user ON c.id_user = contract_user.id_user
-        JOIN (
+        LEFT JOIN LATERAL (
             SELECT 
-                hs.id_stage,
                 hs.id_status_stage,
-                hs.data_change_status,
-                ROW_NUMBER() OVER (PARTITION BY hs.id_stage ORDER BY hs.data_change_status DESC) as rn
+                hs.data_change_status
             FROM history_status hs
-        ) latest_status ON s.id_stage = latest_status.id_stage AND latest_status.rn = 1
-        JOIN status_stages ss ON latest_status.id_status_stage = ss.id_status_stage
+            WHERE hs.id_stage = s.id_stage
+            ORDER BY hs.data_change_status DESC
+            LIMIT 1
+        ) latest_status ON true
+        LEFT JOIN status_stages ss ON latest_status.id_status_stage = ss.id_status_stage
         WHERE s.id_contract = $1
         ORDER BY s.id_stage
     `, id_contract)
@@ -158,75 +160,78 @@ func DBgetStageByContractID(id_contract int) ([]models.Stages, error) {
 }
 
 func DBgetStageUserID(user_id int) ([]models.Stages, error) {
-	conn := db.GetDB()
-	if conn == nil {
-		return nil, errors.New("database connection is nil")
-	}
+    conn := db.GetDB()
+    if conn == nil {
+        return nil, errors.New("database connection is nil")
+    }
 
-	rows, err := conn.Query(context.Background(), `
-    SELECT 
-        s.id_stage,
-        s.name_stage,
-        s.description,
-        s.date_create_start,
-        s.date_create_end,
-        c.name_contract,
-        ss.name_status_stage,
-        u.surname,          
-        u.username,         
-        u.patronymic,       
-        cu.surname AS contract_surname,     
-        cu.username AS contract_username,  
-        cu.patronymic AS contract_patronymic 
-    FROM stages s
-    JOIN contracts c ON s.id_contract = c.id_contract
-    JOIN users cu ON c.id_user = cu.id_user 
-    JOIN (
+    rows, err := conn.Query(context.Background(), `
         SELECT 
-            id_stage, 
-            MAX(id_history_status) as last_status
-        FROM history_status
-        GROUP BY id_stage
-    ) last_hs ON s.id_stage = last_hs.id_stage
-    JOIN history_status hs ON last_hs.last_status = hs.id_history_status
-    JOIN status_stages ss ON hs.id_status_stage = ss.id_status_stage
-    JOIN users u ON s.id_user = u.id_user
-    WHERE s.id_user = $1
-`, user_id)
+            s.id_stage,
+            s.name_stage,
+            s.description,
+            s.date_create_start,
+            s.date_create_end,
+            c.name_contract,
+            ss.name_status_stage,
+            u.surname,          
+            u.username,         
+            u.patronymic,       
+            cu.surname AS contract_surname,     
+            cu.username AS contract_username,  
+            cu.patronymic AS contract_patronymic,
+            hs.data_change_status
+        FROM stages s
+        JOIN contracts c ON s.id_contract = c.id_contract
+        JOIN users cu ON c.id_user = cu.id_user 
+        JOIN users u ON s.id_user = u.id_user
+        LEFT JOIN LATERAL (
+            SELECT 
+                id_status_stage,
+                data_change_status
+            FROM history_status
+            WHERE id_stage = s.id_stage
+            ORDER BY data_change_status DESC
+            LIMIT 1
+        ) hs ON true
+        LEFT JOIN status_stages ss ON hs.id_status_stage = ss.id_status_stage
+        WHERE s.id_user = $1
+    `, user_id)
 
-	if err != nil {
-		return nil, fmt.Errorf("query error: %w", err)
-	}
-	defer rows.Close()
+    if err != nil {
+        return nil, fmt.Errorf("query error: %w", err)
+    }
+    defer rows.Close()
 
-	var stages []models.Stages
-	for rows.Next() {
-		var stage models.Stages
-		if err := rows.Scan(
-			&stage.Id_stage,
-			&stage.Name_stage,
-			&stage.Description,
-			&stage.Date_create_start,
-			&stage.Date_create_end,
-			&stage.Name_contract,
-			&stage.Name_status_stage,
-			&stage.Surname,
-			&stage.Username,
-			&stage.Patronymic,
-			&stage.ContractSurname,
-			&stage.ContractUsername,
-			&stage.ContractPatronymic,
-		); err != nil {
-			return nil, fmt.Errorf("scan error: %w", err)
-		}
-		stages = append(stages, stage)
-	}
+    var stages []models.Stages
+    for rows.Next() {
+        var stage models.Stages
+        if err := rows.Scan(
+            &stage.Id_stage,
+            &stage.Name_stage,
+            &stage.Description,
+            &stage.Date_create_start,
+            &stage.Date_create_end,
+            &stage.Name_contract,
+            &stage.Name_status_stage,
+            &stage.Surname,
+            &stage.Username,
+            &stage.Patronymic,
+            &stage.ContractSurname,
+            &stage.ContractUsername,
+            &stage.ContractPatronymic,
+            &stage.Date_change_status,
+        ); err != nil {
+            return nil, fmt.Errorf("scan error: %w", err)
+        }
+        stages = append(stages, stage)
+    }
 
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("rows error: %w", err)
-	}
+    if err := rows.Err(); err != nil {
+        return nil, fmt.Errorf("rows error: %w", err)
+    }
 
-	return stages, nil
+    return stages, nil
 }
 
 func DBgetStageID(stage_id int) (models.Stages, error) {
@@ -247,7 +252,7 @@ func DBgetStageID(stage_id int) (models.Stages, error) {
         return models.Stages{}, fmt.Errorf("stage with id %d does not exist", stage_id)
     }
 
-    // Основной запрос с обработкой возможных NULL значений
+    // Основной запрос для получения информации о этапе
     query := `
 SELECT 
     s.id_stage,
@@ -257,8 +262,6 @@ SELECT
     COALESCE(u.username, '') as username,
     COALESCE(u.patronymic, '') as patronymic,
     s.description,
-    COALESCE(hs.id_status_stage, 0) as id_status_stage,
-    COALESCE(ss.name_status_stage, '') as name_status_stage,
     s.date_create_start,
     s.date_create_end,
     s.id_contract,
@@ -267,8 +270,6 @@ SELECT
     COALESCE(cu.patronymic, '') as contract_patronymic
 FROM stages s
 LEFT JOIN users u ON s.id_user = u.id_user
-LEFT JOIN history_status hs ON s.id_stage = hs.id_stage
-LEFT JOIN status_stages ss ON hs.id_status_stage = ss.id_status_stage
 LEFT JOIN contracts c ON s.id_contract = c.id_contract
 LEFT JOIN users cu ON c.id_user = cu.id_user
 WHERE s.id_stage = $1`
@@ -282,18 +283,41 @@ WHERE s.id_stage = $1`
         &stage.Username,
         &stage.Patronymic,
         &stage.Description,
-        &stage.Id_status_stage,
-        &stage.Name_status_stage,
         &stage.Date_create_start,
         &stage.Date_create_end,
         &stage.Id_contract,
-		&stage.ContractSurname,
-		&stage.ContractUsername,
-		&stage.ContractPatronymic,
+        &stage.ContractSurname,
+        &stage.ContractUsername,
+        &stage.ContractPatronymic,
     )
 
     if err != nil {
         return models.Stages{}, fmt.Errorf("query failed: %v", err)
+    }
+
+    // Отдельный запрос для получения последнего статуса
+    statusQuery := `
+SELECT 
+    hs.id_status_stage,
+    ss.name_status_stage
+FROM history_status hs
+JOIN status_stages ss ON hs.id_status_stage = ss.id_status_stage
+WHERE hs.id_stage = $1
+ORDER BY hs.data_change_status DESC
+LIMIT 1`
+
+    err = conn.QueryRow(context.Background(), statusQuery, stage_id).Scan(
+        &stage.Id_status_stage,
+        &stage.Name_status_stage,
+    )
+
+    // Если статус не найден, устанавливаем нулевые значения
+    if err != nil && err != sql.ErrNoRows {
+        return models.Stages{}, fmt.Errorf("status query failed: %v", err)
+    }
+    if err == sql.ErrNoRows {
+        stage.Id_status_stage = 0
+        stage.Name_status_stage = ""
     }
 
     return stage, nil
@@ -549,39 +573,57 @@ WHERE hs.id_stage = $1`, id_stage)
 	return comments, nil
 }
 func DBChengeStatusStage(id_stage int, id_status_stage int, comment string, id_user int) error {
-	conn := db.GetDB()
-	if conn == nil {
-		return errors.New("DB connection is nil")
-	}
+    conn := db.GetDB()
+    if conn == nil {
+        return errors.New("DB connection is nil")
+    }
 
-	tx, err := conn.Begin(context.Background())
-	if err != nil {
-		return err
-	}
+    tx, err := conn.Begin(context.Background())
+    if err != nil {
+        return err
+    }
+    defer func() {
+        if err != nil {
+            tx.Rollback(context.Background())
+        }
+    }()
 
-	var id_history_status int
-	err = tx.QueryRow(context.Background(), `INSERT INTO history_status (id_stage, id_status_stage, data_change_status)
-        VALUES ($1, $2, NOW()) RETURNING id_history_status`,
-		id_stage,
-		id_status_stage).Scan(&id_history_status)
+    // 1. Проверяем текущий статус этапа (последняя запись в history_status)
+    var currentStatus int
+    err = tx.QueryRow(context.Background(), `
+        SELECT id_status_stage 
+        FROM history_status 
+        WHERE id_stage = $1 
+        ORDER BY data_change_status DESC 
+        LIMIT 1`,
+        id_stage).Scan(&currentStatus)
 
-	if err != nil {
-		tx.Rollback(context.Background())
-		return err
-	}
+    // Если статус не меняется — можно пропустить (или вернуть ошибку)
+    if err == nil && currentStatus == id_status_stage {
+        return fmt.Errorf("этап уже имеет статус %d", id_status_stage)
+    }
 
-	_, err = tx.Exec(context.Background(), `INSERT INTO comments (id_history_status, comment, date_create_comment, id_user)
-    VALUES ($1, $2, NOW(), $3)`,
-		id_history_status,
-		comment,
-		id_user)
+    // 2. Добавляем новую запись в историю статусов
+    var id_history_status int
+    err = tx.QueryRow(context.Background(), `
+        INSERT INTO history_status (id_stage, id_status_stage, data_change_status)
+        VALUES ($1, $2, NOW())
+        RETURNING id_history_status`,
+        id_stage, id_status_stage).Scan(&id_history_status)
+    if err != nil {
+        return fmt.Errorf("ошибка при добавлении истории статуса: %w", err)
+    }
 
-	if err != nil {
-		tx.Rollback(context.Background())
-		return err
-	}
+    // 3. Добавляем комментарий (теперь с явным указанием NOW() для date_create_comment)
+    _, err = tx.Exec(context.Background(), `
+        INSERT INTO comments (id_history_status, comment, date_create_comment, id_user)
+        VALUES ($1, $2, NOW(), $3)`,
+        id_history_status, comment, id_user)
+    if err != nil {
+        return fmt.Errorf("ошибка при добавлении комментария: %w", err)
+    }
 
-	return tx.Commit(context.Background())
+    return tx.Commit(context.Background())
 }
 func DBdeleteFile(id_files int) error {
 	conn := db.GetDB()
