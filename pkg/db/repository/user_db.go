@@ -196,7 +196,7 @@ func DBgetUserId(login string)(int, error) {
 		return 0, errors.New("connection error")
 	}
 	var id int
-	err := conn.QueryRow(context.Background(), "SELECT id_user FROM users WHERE login = $1", login).Scan(&id)
+	err := conn.QueryRow(context.Background(), "SELECT id_user FROM users WHERE login= $1", login).Scan(&id)
 	if err != nil {
 		return 0, err
 	}
