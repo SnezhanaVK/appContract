@@ -75,9 +75,40 @@ func SendingCode(user models.Users) (string, error) {
 	}
 
 	emailContent := utils.EmailContent{
-		Subject: "Ваш код подтверждения",
-		Body:    fmt.Sprintf("Ваш код подтверждения: <strong>%s</strong>", verificationCode),
-	}
+    Subject: "Ваш код подтверждения",
+    Body: fmt.Sprintf(`
+        <div style="
+            background-color: rgb(67, 73, 72);
+            color: #ffffff;
+            padding: 25px;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            border-radius: 8px;
+            max-width: 600px;
+            margin: 0 auto;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        ">
+            <h2 style="color: #ffffff; font-size: 18px; margin-top: 0;">Код подтверждения</h2>
+            <p style="font-size: 15px; line-height: 1.5;">Уважаемый пользователь,</p>
+            <p style="font-size: 15px; line-height: 1.5;">
+                Ваш код подтверждения: <strong style="
+                    color: #ffffff;
+                    font-size: 20px;
+                    letter-spacing: 2px;
+                    background: rgba(255,255,255,0.1);
+                    padding: 8px 12px;
+                    border-radius: 4px;
+                    display: inline-block;
+                ">%s</strong>
+            </p>
+            <p style="font-size: 14px; line-height: 1.5; color: #cccccc;">
+                Никому не сообщайте этот код.
+            </p>
+            <div style="margin-top: 20px; padding-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.1);">
+                <p style="font-size: 13px; color: #cccccc;">Это автоматическое уведомление. Пожалуйста, не отвечайте на него.</p>
+            </div>
+        </div>
+    `, verificationCode),
+}
 
 	err := emailSender.SendNotification(user.Email, emailContent)
 	if err != nil {

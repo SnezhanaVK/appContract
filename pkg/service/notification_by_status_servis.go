@@ -45,11 +45,27 @@ func (s *NotificationService) NotifyStageStatusChange(ctx context.Context, stage
 	}
 
 	subject := fmt.Sprintf("Изменение статуса этапа '%s' в контракте '%s'", stageName, contractName)
-	body := fmt.Sprintf(`
-		<h1>Уведомление об изменении статуса</h1>
-		<p>Статус этапа <strong>%s</strong> в контракте <strong>%s</strong> был изменен на <strong>%s</strong>.</p>
-	`, stageName, contractName, statusName)
-
+body := fmt.Sprintf(`
+	<div style="
+		background-color: rgb(67, 73, 72);
+		color: #ffffff;
+		padding: 25px;
+		font-family: 'Segoe UI', Arial, sans-serif;
+		border-radius: 8px;
+		max-width: 600px;
+		margin: 0 auto;
+		box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+	">
+		<h2 style="color: #ffffff; font-size: 18px; margin-top: 0;">Уведомление об изменении статуса</h2>
+		<p style="font-size: 15px; line-height: 1.5;">Уважаемый пользователь,</p>
+		<p style="font-size: 15px; line-height: 1.5;">
+			Статус этапа <strong style="color: #ffffff;">%s</strong> в контракте <strong style="color: #ffffff;">%s</strong> был изменен на <strong style="color: #ffffff;">%s</strong>.
+		</p>
+		<div style="margin-top: 20px; padding-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.1);">
+			<p style="font-size: 13px; color: #cccccc;">Это автоматическое уведомление. Пожалуйста, не отвечайте на него.</p>
+		</div>
+	</div>
+`, stageName, contractName, statusName)
 	if comment != "" {
 		body += fmt.Sprintf(`<p>Комментарий: <em>%s</em></p>`, comment)
 	}

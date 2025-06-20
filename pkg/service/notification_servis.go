@@ -44,22 +44,57 @@ func ProcessDailyNotifications() error {
 func formatContractMessage(cn models.ContractNotification) string {
 	daysText := formatDaysText(cn.DaysBefore)
 	return fmt.Sprintf(`
-		<p>Уважаемый пользователь,</p>
-		<p>Контракт <strong>%s</strong> завершается через %s.</p>
-		<p>Дата окончания: %s</p>
-		<p>Пожалуйста, примите необходимые меры.</p>
+		<div style="
+			background-color: rgb(67, 73, 72);
+			color: #ffffff;
+			padding: 25px;
+			font-family: 'Segoe UI', Arial, sans-serif;
+			border-radius: 8px;
+			max-width: 600px;
+			margin: 0 auto;
+			box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+		">
+			<h2 style="color: #ffffff; font-size: 18px; margin-top: 0;">Уведомление о контракте</h2>
+			<p style="font-size: 15px; line-height: 1.5;">Уважаемый пользователь,</p>
+			<p style="font-size: 15px; line-height: 1.5;">
+				Контракт <strong style="color: #ffffff;">%s</strong> завершается через <strong>%s</strong>.
+			</p>
+			<p style="font-size: 15px; line-height: 1.5;">Дата окончания: <strong>%s</strong></p>
+			<p style="font-size: 15px; line-height: 1.5;">Пожалуйста, примите необходимые меры.</p>
+			<div style="margin-top: 20px; padding-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.1);">
+				<p style="font-size: 13px; color: #cccccc;">Это автоматическое уведомление. Пожалуйста, не отвечайте на него.</p>
+			</div>
+		</div>
 	`, cn.ContractName, daysText, cn.DateEnd.Format("02.01.2006"))
 }
 
 func formatStageMessage(sn models.StageNotification) string {
 	daysText := formatDaysText(sn.DaysBefore)
 	return fmt.Sprintf(`
-		<p>Уважаемый пользователь,</p>
-		<p>Этап <strong>%s</strong> завершается через %s.</p>
-		<p>Дата окончания: %s</p>
-		<p>Пожалуйста, проверьте сроки выполнения.</p>
+		<div style="
+			background-color: rgb(67, 73, 72);
+			color: #ffffff;
+			padding: 25px;
+			font-family: 'Segoe UI', Arial, sans-serif;
+			border-radius: 8px;
+			max-width: 600px;
+			margin: 0 auto;
+			box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+		">
+			<h2 style="color: #ffffff; font-size: 18px; margin-top: 0;">Уведомление об этапе</h2>
+			<p style="font-size: 15px; line-height: 1.5;">Уважаемый пользователь,</p>
+			<p style="font-size: 15px; line-height: 1.5;">
+				Этап <strong style="color: #ffffff;">%s</strong> завершается через <strong>%s</strong>.
+			</p>
+			<p style="font-size: 15px; line-height: 1.5;">Дата окончания: <strong>%s</strong></p>
+			<p style="font-size: 15px; line-height: 1.5;">Пожалуйста, проверьте сроки выполнения.</p>
+			<div style="margin-top: 20px; padding-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.1);">
+				<p style="font-size: 13px; color: #cccccc;">Это автоматическое уведомление. Пожалуйста, не отвечайте на него.</p>
+			</div>
+		</div>
 	`, sn.StageName, daysText, sn.DateEnd.Format("02.01.2006"))
 }
+
 
 func formatDaysText(days int) string {
 	switch {

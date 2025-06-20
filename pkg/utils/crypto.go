@@ -14,7 +14,7 @@ func GenerateSalt(length int) (string, error) {
 		return "", errors.New("salt length must be positive")
 	}
 
-	// Минимальная рекомендуемая длина соли - 16 байт
+	
 	if length < 16 {
 		length = 16
 	}

@@ -4,14 +4,38 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func SetupDatabase() error {
-	connConfig, err := pgx.ParseConfig("postgres://postgres:1234@localhost:5432/postgres")
-
+	 dbHost := os.Getenv("DB_HOST")
+    if dbHost == "" {
+        dbHost = "localhost" 
+    }
+    dbPort := os.Getenv("DB_PORT")
+    if dbPort == "" {
+        dbPort = "5432"
+    }
+    dbUser := os.Getenv("DB_USER")
+    if dbUser == "" {
+        dbUser = "postgres"
+    }
+    dbPass := os.Getenv("DB_PASSWORD")
+    if dbPass == "" {
+        dbPass = "1234"
+    }
+    dbName := os.Getenv("DB_NAME")
+    if dbName == "" {
+        dbName = "contract_db"
+    }
+	
+    adminConnStr := fmt.Sprintf("postgres://%s:%s@%s:%s/postgres?sslmode=disable", 
+        dbUser, dbPass, dbHost, dbPort)
+	connConfig, err := pgx.ParseConfig(adminConnStr)
 	if err != nil {
 		return fmt.Errorf("Error parsing database connection string: %v", err)
 	}
@@ -276,15 +300,26 @@ CONSTRAINT fk_notification_settings FOREIGN KEY (id_notification_settings) REFER
 
 	}
 
-	poolConfig, err := pgxpool.ParseConfig("host=localhost user=postgres password=1234 dbname=contract_db port=5432 sslmode=disable")
-	if err != nil {
-		return fmt.Errorf("error parsing pool config: %v", err)
-	}
+	 // Создаем пул соединений для основной работы
+    poolConfigStr := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable",
+        dbHost, dbUser, dbPass, dbName, dbPort)
+    
+    poolConfig, err := pgxpool.ParseConfig(poolConfigStr)
+    if err != nil {
+        return fmt.Errorf("error parsing pool config: %v", err)
+    }
 
-	dbPool, err = pgxpool.NewWithConfig(context.Background(), poolConfig)
-	if err != nil {
-		return fmt.Errorf("error creating connection pool: %v", err)
-	}
+    // Настройка пула соединений
+    poolConfig.MaxConns = 25
+    poolConfig.MinConns = 3
+    poolConfig.MaxConnLifetime = time.Hour
+    poolConfig.MaxConnIdleTime = 30 * time.Minute
+    poolConfig.HealthCheckPeriod = time.Minute
 
-	return nil
+    dbPool, err = pgxpool.NewWithConfig(context.Background(), poolConfig)
+    if err != nil {
+        return fmt.Errorf("error creating connection pool: %v", err)
+    }
+
+    return nil
 }
