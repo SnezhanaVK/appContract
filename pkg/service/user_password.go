@@ -9,7 +9,7 @@ import (
 	"appContract/pkg/utils"
 )
 
-func CreateUser(user models.Users, emailSender utils.EmailSenderInterface) error {
+func CreateUser(user models.Users, emailSender utils.EmailSenderInterface)  error {
 
 	password, err := utils.GenerateStrongPassword()
 	if err != nil {

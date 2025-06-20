@@ -143,7 +143,7 @@ func DBgetUserID(user_id int) ([]models.Users, error) {
 	return users, nil
 }
 
-func DBaddUser(user models.Users, password string) error {
+func DBaddUser(user models.Users, password string)  error {
 	conn := db.GetDB()
 	if conn == nil {
 		return errors.New("connection error")
@@ -188,7 +188,19 @@ func DBaddUser(user models.Users, password string) error {
 		log.Printf("Error creating user: %v", err)
 		return err
 	}
-	return nil
+	return  nil
+}
+func DBgetUserId(login string)(int, error) {
+	conn := db.GetDB()
+	if conn == nil {
+		return 0, errors.New("connection error")
+	}
+	var id int
+	err := conn.QueryRow(context.Background(), "SELECT id_user FROM users WHERE login = $1", login).Scan(&id)
+	if err != nil {
+		return 0, err
+	}
+	return id, nil
 }
 
 func DBAddUserRole(user models.Users, roleID int) error {
@@ -363,13 +375,17 @@ func DBchangeUser(user models.Users) error {
         surname = COALESCE(NULLIF($1, ''), surname),
         username = COALESCE(NULLIF($2, ''), username),
         patronymic = COALESCE(NULLIF($3, ''), patronymic),
-        phone = COALESCE(NULLIF($4, ''), phone)
-   	    WHERE id_user = $5
+        phone = COALESCE(NULLIF($4, ''), phone),
+		login = COALESCE(NULLIF($5, ''), login),
+		email = COALESCE(NULLIF($6, ''), email)
+   	    WHERE id_user = $7
     `,
 		user.Surname,
 		user.Username,
 		user.Patronymic,
 		user.Phone,
+		user.Email,
+		user.Login,
 		user.Id_user,
 	)
 

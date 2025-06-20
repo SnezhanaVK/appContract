@@ -7,6 +7,7 @@ import (
 	"appContract/pkg/utils"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -128,7 +129,13 @@ func PostCreateUser(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
-
+	id_user,err:=db.DBgetUserId(user.Login)
+	log.Println(id_user,err)
+	if id_user!=0{
+		http.Error(w, "User with this login already exists", http.StatusBadRequest)
+		return
+	}
+	
 	emailSender := utils.NewDefaultEmailSender()
 	if err := service.CreateUser(user, emailSender); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -138,6 +145,7 @@ func PostCreateUser(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(map[string]string{
 		"message": "User created successfully. Account credentials sent to email.",
+		"ID":       strconv.Itoa(id_user),
 	})
 }
 
