@@ -298,7 +298,6 @@ func DBRemoveUserRole(user models.Users, roleID int) error {
 		return fmt.Errorf("user doesn't have %s role (id_role=%d)", roleName, roleID)
 	}
 
-	// Удаляем указанную роль
 	tag, err := conn.Exec(context.Background(), `
         DELETE FROM user_by_role
         WHERE id_user = $1 AND id_role = $2`,
@@ -311,7 +310,6 @@ func DBRemoveUserRole(user models.Users, roleID int) error {
 		return fmt.Errorf("failed to remove %s role: %v", roleName, err)
 	}
 
-	// Проверяем, была ли действительно удалена запись
 	if tag.RowsAffected() == 0 {
 		return fmt.Errorf("no %s role was removed (id_user=%d)", roleName, user.Id_user)
 	}
@@ -383,9 +381,9 @@ func DBchangeUser(user models.Users) error {
 		user.Surname,
 		user.Username,
 		user.Patronymic,
-		user.Phone,
-		user.Email,
+		user.Phone,	
 		user.Login,
+		user.Email,
 		user.Id_user,
 	)
 
