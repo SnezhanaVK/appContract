@@ -33,11 +33,11 @@ func ConnectDB() {
 			log.Fatal("Error parsing database config: ", err)
 		}
 
-		config.MaxConns = 25
-		config.MinConns = 3
-		config.MaxConnLifetime = 1 * time.Hour
-		config.MaxConnIdleTime = 30 * time.Minute
-		config.HealthCheckPeriod = 1 * time.Minute
+	config.MaxConns = 50  // Увеличиваем максимальное количество соединений
+	config.MinConns = 10  // Минимальное количество соединений
+	config.MaxConnLifetime = 1 * time.Hour
+	config.MaxConnIdleTime = 30 * time.Minute
+	config.HealthCheckPeriod = 1 * time.Minute
 
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
